@@ -24,7 +24,7 @@ export function AssetList({ type }: AssetListProps) {
           <div className="flex items-center gap-2">
             <div className="relative w-8 h-8">
               <Image
-                src={`/placeholder.svg?height=32&width=32&text=${asset.symbol}`}
+                src={`/images/coins/${asset.symbol.toLowerCase()}.png`}
                 alt={asset.name}
                 width={32}
                 height={32}

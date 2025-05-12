@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { ArrowDownRight, ArrowUpRight, ArrowDownLeft, ArrowUpLeft, Clock } from "lucide-react"
+import Image from "next/image"
 
 export function TransactionHistory() {
   const { transactions } = useCompound()
@@ -95,8 +96,17 @@ export function TransactionHistory() {
                 <div key={index} className="bg-[#252836] p-3 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`${getTransactionBg(tx.type)} p-2 rounded-full`}>
-                        {getTransactionIcon(tx.type)}
+                      <div className="flex items-center gap-2">
+                        <div className={`${getTransactionBg(tx.type)} p-2 rounded-full`}>
+                          {getTransactionIcon(tx.type)}
+                        </div>
+                        <Image
+                          src={`/images/coins/${tx.asset.toLowerCase()}.png`}
+                          alt={tx.asset}
+                          width={20}
+                          height={20}
+                          className="rounded-full"
+                        />
                       </div>
                       <div>
                         <div className="font-medium">

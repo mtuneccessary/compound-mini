@@ -10,6 +10,7 @@ import { AssetList } from "@/components/asset-list"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
+import Image from "next/image"
 
 export function Dashboard() {
   const {
@@ -115,8 +116,17 @@ export function Dashboard() {
               <div className="bg-[#252836] rounded-lg p-3">
                 <div className="space-y-2">
                   {Object.entries(userBalances).map(([symbol, amount]) => (
-                    <div key={symbol} className="flex justify-between">
-                      <span>{symbol}</span>
+                    <div key={symbol} className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src={`/images/coins/${symbol.toLowerCase()}.png`}
+                          alt={symbol}
+                          width={20}
+                          height={20}
+                          className="rounded-full"
+                        />
+                        <span>{symbol}</span>
+                      </div>
                       <span>{formatCurrency(amount, symbol)}</span>
                     </div>
                   ))}
