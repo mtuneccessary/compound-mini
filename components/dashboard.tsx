@@ -8,9 +8,9 @@ import { formatCurrency } from "@/lib/utils"
 import { ArrowDownRight, PiggyBank, AlertTriangle, RefreshCw, Wallet } from "lucide-react"
 import { AssetList } from "@/components/asset-list"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
 import { CryptoIcon } from "./crypto-icon"
+import { useFeedback } from "@/lib/feedback-provider"
 
 export function Dashboard() {
   const {
@@ -24,8 +24,8 @@ export function Dashboard() {
     resetToHighBalance,
     isLoading,
   } = useCompound()
-  const { toast } = useToast()
   const { showConfirm } = useTelegram()
+  const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
 
   const [mounted, setMounted] = useState(false)
 
@@ -40,20 +40,22 @@ export function Dashboard() {
   const handleReset = async () => {
     const confirmed = await showConfirm("Reset all data? This will clear your positions and balances.")
     if (confirmed) {
+      showLoading("Resetting data...")
       resetData()
-      toast({
-        title: "Data reset",
-        description: "All data has been reset to initial values",
-      })
+      setTimeout(() => {
+        hideLoading()
+        showSuccess("Data reset", "All data has been reset to initial values")
+      }, 1000)
     }
   }
 
   const handleRefillWallet = async () => {
+    showLoading("Refilling wallet...")
     resetToHighBalance()
-    toast({
-      title: "Wallet refilled",
-      description: "Your wallet has been refilled with 10,000 USDC and other assets",
-    })
+    setTimeout(() => {
+      hideLoading()
+      showSuccess("Wallet refilled", "Your wallet has been refilled with 10,000 USDC and other assets")
+    }, 1000)
   }
 
   return (

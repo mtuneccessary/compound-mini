@@ -9,15 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatPercentage } from "@/lib/utils"
 import { ArrowDownLeft } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
 import { Progress } from "@/components/ui/progress"
 import { CryptoIcon } from "./crypto-icon"
+import { useFeedback } from "@/lib/feedback-provider"
 
 export function RepayForm() {
   const { borrowedAssets, userBalances, repayAsset, borrowLimitUsed, isLoading } = useCompound()
-  const { toast } = useToast()
   const { showConfirm } = useTelegram()
+  const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
 
   const [selectedAsset, setSelectedAsset] = useState("")
   const [amount, setAmount] = useState("")
@@ -53,38 +53,26 @@ export function RepayForm() {
 
   const handleRepay = async () => {
     if (!selectedAsset || !amount || Number.parseFloat(amount) <= 0) {
-      toast({
-        title: "Invalid input",
-        description: "Please enter a valid amount",
-        variant: "destructive",
-      })
+      showError("Invalid input", "Please enter a valid amount")
       return
     }
 
     if (Number.parseFloat(amount) > walletBalance) {
-      toast({
-        title: "Insufficient balance",
-        description: "You don't have enough balance in your wallet",
-        variant: "destructive",
-      })
+      showError("Insufficient balance", "You don't have enough balance in your wallet")
       return
     }
 
     const confirmed = await showConfirm(`Repay ${amount} ${selectedAsset}?`)
     if (confirmed) {
       try {
+        showLoading(`Repaying ${amount} ${selectedAsset}...`)
         await repayAsset(selectedAsset, Number.parseFloat(amount))
-        toast({
-          title: "Repayment successful",
-          description: `You have repaid ${amount} ${selectedAsset}`,
-        })
+        hideLoading()
+        showSuccess("Repayment successful", `You have repaid ${amount} ${selectedAsset}`)
         setAmount("")
       } catch (error: any) {
-        toast({
-          title: "Repayment failed",
-          description: error.message || "An error occurred while repaying",
-          variant: "destructive",
-        })
+        hideLoading()
+        showError("Repayment failed", error.message || "An error occurred while repaying")
       }
     }
   }

@@ -9,15 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatPercentage } from "@/lib/utils"
 import { ArrowUpRight } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
 import { Progress } from "@/components/ui/progress"
 import { CryptoIcon } from "./crypto-icon"
+import { useFeedback } from "@/lib/feedback-provider"
 
 export function WithdrawForm() {
   const { suppliedAssets, withdrawAsset, totalBorrowed, borrowLimit, borrowLimitUsed, isLoading } = useCompound()
-  const { toast } = useToast()
   const { showConfirm } = useTelegram()
+  const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
 
   const [selectedAsset, setSelectedAsset] = useState("")
   const [amount, setAmount] = useState("")
@@ -54,48 +54,32 @@ export function WithdrawForm() {
 
   const handleWithdraw = async () => {
     if (!selectedAsset || !amount || Number.parseFloat(amount) <= 0) {
-      toast({
-        title: "Invalid input",
-        description: "Please enter a valid amount",
-        variant: "destructive",
-      })
+      showError("Invalid input", "Please enter a valid amount")
       return
     }
 
     if (!selectedAssetData || Number.parseFloat(amount) > selectedAssetData.amount) {
-      toast({
-        title: "Insufficient balance",
-        description: "You don't have enough supplied balance",
-        variant: "destructive",
-      })
+      showError("Insufficient balance", "You don't have enough supplied balance")
       return
     }
 
     // Check if withdrawal would put position at risk
     if (newBorrowLimitUsed > 100) {
-      toast({
-        title: "Withdrawal would put your position at risk",
-        description: "This withdrawal would exceed your borrow limit",
-        variant: "destructive",
-      })
+      showError("Withdrawal would put your position at risk", "This withdrawal would exceed your borrow limit")
       return
     }
 
     const confirmed = await showConfirm(`Withdraw ${amount} ${selectedAsset}?`)
     if (confirmed) {
       try {
+        showLoading(`Withdrawing ${amount} ${selectedAsset}...`)
         await withdrawAsset(selectedAsset, Number.parseFloat(amount))
-        toast({
-          title: "Withdrawal successful",
-          description: `You have withdrawn ${amount} ${selectedAsset}`,
-        })
+        hideLoading()
+        showSuccess("Withdrawal successful", `You have withdrawn ${amount} ${selectedAsset}`)
         setAmount("")
       } catch (error: any) {
-        toast({
-          title: "Withdrawal failed",
-          description: error.message || "An error occurred while withdrawing",
-          variant: "destructive",
-        })
+        hideLoading()
+        showError("Withdrawal failed", error.message || "An error occurred while withdrawing")
       }
     }
   }

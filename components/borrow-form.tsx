@@ -9,15 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatPercentage } from "@/lib/utils"
 import { ArrowDownRight } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
 import { Progress } from "@/components/ui/progress"
 import { CryptoIcon } from "./crypto-icon"
+import { useFeedback } from "@/lib/feedback-provider"
 
 export function BorrowForm() {
   const { availableAssets, borrowAsset, borrowLimit, totalBorrowed, borrowLimitUsed, isLoading } = useCompound()
-  const { toast } = useToast()
   const { showConfirm } = useTelegram()
+  const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
 
   const [selectedAsset, setSelectedAsset] = useState("")
   const [amount, setAmount] = useState("")
@@ -59,38 +59,26 @@ export function BorrowForm() {
 
   const handleBorrow = async () => {
     if (!selectedAsset || !amount || Number.parseFloat(amount) <= 0) {
-      toast({
-        title: "Invalid input",
-        description: "Please enter a valid amount",
-        variant: "destructive",
-      })
+      showError("Invalid input", "Please enter a valid amount")
       return
     }
 
     if (Number.parseFloat(amount) > maxBorrowAmount) {
-      toast({
-        title: "Exceeds borrow limit",
-        description: "Amount exceeds your borrow limit",
-        variant: "destructive",
-      })
+      showError("Exceeds borrow limit", "Amount exceeds your borrow limit")
       return
     }
 
     const confirmed = await showConfirm(`Borrow ${amount} ${selectedAsset}?`)
     if (confirmed) {
       try {
+        showLoading(`Borrowing ${amount} ${selectedAsset}...`)
         await borrowAsset(selectedAsset, Number.parseFloat(amount))
-        toast({
-          title: "Borrow successful",
-          description: `You have borrowed ${amount} ${selectedAsset}`,
-        })
+        hideLoading()
+        showSuccess("Borrow successful", `You have borrowed ${amount} ${selectedAsset}`)
         setAmount("")
       } catch (error: any) {
-        toast({
-          title: "Borrow failed",
-          description: error.message || "An error occurred while borrowing",
-          variant: "destructive",
-        })
+        hideLoading()
+        showError("Borrow failed", error.message || "An error occurred while borrowing")
       }
     }
   }

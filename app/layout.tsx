@@ -4,6 +4,7 @@ import "./globals.css"
 import { TelegramProvider } from "@/lib/telegram-provider"
 import { CompoundProvider } from "@/lib/compound-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { FeedbackProvider } from "@/lib/feedback-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,8 +24,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <TelegramProvider>
           <CompoundProvider>
-            {children}
-            <Toaster />
+            <FeedbackProvider>
+              {children}
+              <Toaster />
+            </FeedbackProvider>
           </CompoundProvider>
         </TelegramProvider>
       </body>

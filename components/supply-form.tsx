@@ -9,14 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatPercentage } from "@/lib/utils"
 import { ArrowLeftRight } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
 import { CryptoIcon } from "./crypto-icon"
+import { useFeedback } from "@/lib/feedback-provider"
 
 export function SupplyForm() {
   const { availableAssets, userBalances, supplyAsset, isLoading } = useCompound()
-  const { toast } = useToast()
   const { showConfirm } = useTelegram()
+  const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
 
   const [selectedAsset, setSelectedAsset] = useState("")
   const [amount, setAmount] = useState("")
@@ -46,38 +46,26 @@ export function SupplyForm() {
 
   const handleSupply = async () => {
     if (!selectedAsset || !amount || Number.parseFloat(amount) <= 0) {
-      toast({
-        title: "Invalid input",
-        description: "Please enter a valid amount",
-        variant: "destructive",
-      })
+      showError("Invalid input", "Please enter a valid amount")
       return
     }
 
     if (Number.parseFloat(amount) > walletBalance) {
-      toast({
-        title: "Insufficient balance",
-        description: "You don't have enough balance",
-        variant: "destructive",
-      })
+      showError("Insufficient balance", "You don't have enough balance")
       return
     }
 
     const confirmed = await showConfirm(`Supply ${amount} ${selectedAsset}?`)
     if (confirmed) {
       try {
+        showLoading(`Supplying ${amount} ${selectedAsset}...`)
         await supplyAsset(selectedAsset, Number.parseFloat(amount))
-        toast({
-          title: "Supply successful",
-          description: `You have supplied ${amount} ${selectedAsset}`,
-        })
+        hideLoading()
+        showSuccess("Supply successful", `You have supplied ${amount} ${selectedAsset}`)
         setAmount("")
       } catch (error: any) {
-        toast({
-          title: "Supply failed",
-          description: error.message || "An error occurred while supplying",
-          variant: "destructive",
-        })
+        hideLoading()
+        showError("Supply failed", error.message || "An error occurred while supplying")
       }
     }
   }
