@@ -11,7 +11,7 @@ import { formatCurrency, formatPercentage } from "@/lib/utils"
 import { ArrowLeftRight } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
-import Image from "next/image"
+import { CryptoIcon } from "./crypto-icon"
 
 export function SupplyForm() {
   const { availableAssets, userBalances, supplyAsset, isLoading } = useCompound()
@@ -101,13 +101,7 @@ export function SupplyForm() {
                 <SelectValue placeholder="Select asset">
                   {selectedAsset && (
                     <div className="flex items-center gap-2">
-                      <Image
-                        src={`/images/coins/${selectedAsset.toLowerCase()}.png`}
-                        alt={selectedAsset}
-                        width={20}
-                        height={20}
-                        className="rounded-full"
-                      />
+                      <CryptoIcon symbol={selectedAsset} size={20} />
                       <span>{selectedAsset}</span>
                     </div>
                   )}
@@ -117,13 +111,7 @@ export function SupplyForm() {
                 {availableAssets.map((asset) => (
                   <SelectItem key={asset.symbol} value={asset.symbol}>
                     <div className="flex items-center gap-2">
-                      <Image
-                        src={`/images/coins/${asset.symbol.toLowerCase()}.png`}
-                        alt={asset.name}
-                        width={20}
-                        height={20}
-                        className="rounded-full"
-                      />
+                      <CryptoIcon symbol={asset.symbol} size={20} />
                       <span>
                         {asset.symbol} - {asset.name}
                       </span>

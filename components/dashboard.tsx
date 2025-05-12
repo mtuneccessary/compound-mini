@@ -10,7 +10,7 @@ import { AssetList } from "@/components/asset-list"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
-import Image from "next/image"
+import { CryptoIcon } from "./crypto-icon"
 
 export function Dashboard() {
   const {
@@ -118,13 +118,7 @@ export function Dashboard() {
                   {Object.entries(userBalances).map(([symbol, amount]) => (
                     <div key={symbol} className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <Image
-                          src={`/images/coins/${symbol.toLowerCase()}.png`}
-                          alt={symbol}
-                          width={20}
-                          height={20}
-                          className="rounded-full"
-                        />
+                        <CryptoIcon symbol={symbol} size={20} />
                         <span>{symbol}</span>
                       </div>
                       <span>{formatCurrency(amount, symbol)}</span>

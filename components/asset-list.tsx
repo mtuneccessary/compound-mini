@@ -2,7 +2,7 @@
 
 import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatPercentage } from "@/lib/utils"
-import Image from "next/image"
+import { CryptoIcon } from "./crypto-icon"
 
 interface AssetListProps {
   type: "supplied" | "borrowed"
@@ -22,15 +22,7 @@ export function AssetList({ type }: AssetListProps) {
       {assets.map((asset) => (
         <div key={asset.symbol} className="bg-[#252836] rounded-lg p-3 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="relative w-8 h-8">
-              <Image
-                src={`/images/coins/${asset.symbol.toLowerCase()}.png`}
-                alt={asset.name}
-                width={32}
-                height={32}
-                className="rounded-full"
-              />
-            </div>
+            <CryptoIcon symbol={asset.symbol} size={32} />
             <div>
               <div className="font-medium">{asset.symbol}</div>
               <div className="text-xs text-gray-400">{asset.name}</div>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { ArrowDownRight, ArrowUpRight, ArrowDownLeft, ArrowUpLeft, Clock } from "lucide-react"
-import Image from "next/image"
+import { CryptoIcon } from "./crypto-icon"
 
 export function TransactionHistory() {
   const { transactions } = useCompound()
@@ -100,13 +100,7 @@ export function TransactionHistory() {
                         <div className={`${getTransactionBg(tx.type)} p-2 rounded-full`}>
                           {getTransactionIcon(tx.type)}
                         </div>
-                        <Image
-                          src={`/images/coins/${tx.asset.toLowerCase()}.png`}
-                          alt={tx.asset}
-                          width={20}
-                          height={20}
-                          className="rounded-full"
-                        />
+                        <CryptoIcon symbol={tx.asset} size={20} />
                       </div>
                       <div>
                         <div className="font-medium">

@@ -12,7 +12,7 @@ import { ArrowUpRight } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useTelegram } from "@/lib/telegram-provider"
 import { Progress } from "@/components/ui/progress"
-import Image from "next/image"
+import { CryptoIcon } from "./crypto-icon"
 
 export function WithdrawForm() {
   const { suppliedAssets, withdrawAsset, totalBorrowed, borrowLimit, borrowLimitUsed, isLoading } = useCompound()
@@ -147,13 +147,7 @@ export function WithdrawForm() {
                 <SelectValue placeholder="Select asset">
                   {selectedAsset && (
                     <div className="flex items-center gap-2">
-                      <Image
-                        src={`/images/coins/${selectedAsset.toLowerCase()}.png`}
-                        alt={selectedAsset}
-                        width={20}
-                        height={20}
-                        className="rounded-full"
-                      />
+                      <CryptoIcon symbol={selectedAsset} size={20} />
                       <span>{selectedAsset}</span>
                     </div>
                   )}
@@ -163,13 +157,7 @@ export function WithdrawForm() {
                 {suppliedAssets.map((asset) => (
                   <SelectItem key={asset.symbol} value={asset.symbol}>
                     <div className="flex items-center gap-2">
-                      <Image
-                        src={`/images/coins/${asset.symbol.toLowerCase()}.png`}
-                        alt={asset.name}
-                        width={20}
-                        height={20}
-                        className="rounded-full"
-                      />
+                      <CryptoIcon symbol={asset.symbol} size={20} />
                       <span>
                         {asset.symbol} - {formatCurrency(asset.amount, asset.symbol)}
                       </span>
