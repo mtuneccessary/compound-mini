@@ -25,3 +25,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Hardhat subproject
+onchain/node_modules/
+onchain/artifacts/
+onchain/cache/
+onchain/.env
