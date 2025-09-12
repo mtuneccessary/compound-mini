@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, formatDate } from "@/lib/utils"
-import { ArrowUpRight, ArrowDownLeft, Clock, Loader2 } from "lucide-react"
+import { ArrowUpRight, ArrowDownLeft, Clock, Loader2, RefreshCw } from "lucide-react"
 import { CryptoIcon } from "./crypto-icon"
 import { useAccount } from "wagmi"
 import { publicClient, COMET_ADDRESS } from "@/lib/comet-onchain"
@@ -17,13 +17,6 @@ interface Transaction {
   user: string
 }
 
-const EVENT_TOPICS = {
-  supplyCollateral: "0xfa56f7b24f17183d81894d3ac2ee654e3c26388d17a28dbd9549b8114304e1f4",
-  withdrawCollateral: "0xd6d480d5b3068db003533b170d67561494d72e3bf9fa40a266471351ebba9e16",
-  supply: "0xd1cf3d156d5f8f0d50f6c122ed609cec09d35c9b9fb3fff6ea0959134dae424e",
-  withdraw: "0x9b1bfa7fa9ee420a16e124f794c35ac9f90472acc99140eb2f6447c714cad8eb"
-}
-
 export function TransactionHistory() {
   const { address, isConnected } = useAccount()
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -35,79 +28,174 @@ export function TransactionHistory() {
     setMounted(true)
   }, [])
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      setLoading(true)
-      setError(null)
+  const fetchTransactions = async () => {
+    if (!mounted || !isConnected) return
 
-      try {
-        // get current block and compute fromBlock
-        const tip = await publicClient.getBlockNumber()
-        const fromBlock = tip > BigInt(10000) ? tip - BigInt(10000) : BigInt(0)
+    console.log("🚀 Starting transaction fetch...")
+    setLoading(true)
+    setError(null)
 
-        // fetch logs per event topic to avoid invalid-params on some RPCs
-        const [supplyColLogs, withdrawColLogs, supplyLogs, withdrawLogs] = await Promise.all([
-          publicClient.getLogs({ address: COMET_ADDRESS, fromBlock, toBlock: tip, topics: [EVENT_TOPICS.supplyCollateral] }),
-          publicClient.getLogs({ address: COMET_ADDRESS, fromBlock, toBlock: tip, topics: [EVENT_TOPICS.withdrawCollateral] }),
-          publicClient.getLogs({ address: COMET_ADDRESS, fromBlock, toBlock: tip, topics: [EVENT_TOPICS.supply] }),
-          publicClient.getLogs({ address: COMET_ADDRESS, fromBlock, toBlock: tip, topics: [EVENT_TOPICS.withdraw] }),
-        ])
-        const logs = [...supplyColLogs, ...withdrawColLogs, ...supplyLogs, ...withdrawLogs]
+    try {
+      // Get current block
+      const currentBlock = await publicClient.getBlockNumber()
+      console.log("📦 Current block:", currentBlock.toString())
+      
+      // Look back 100 blocks (reduced for performance)
+      const fromBlock = currentBlock > BigInt(100) ? currentBlock - BigInt(100) : BigInt(0)
+      console.log("📦 From block:", fromBlock.toString())
 
-        // parse logs
-        const parsed: Transaction[] = []
-        for (const log of logs) {
-          const eventTopic = log.topics?.[0]
-          if (!eventTopic) continue
+      const userTransactions: Transaction[] = []
+      
+      // Get recent blocks and check for user transactions
+      for (let blockNum = currentBlock; blockNum >= fromBlock && blockNum > BigInt(0); blockNum--) {
+        try {
+          const block = await publicClient.getBlock({ blockNumber: blockNum, includeTransactions: true })
+          
+          if (block.transactions) {
+            for (const tx of block.transactions) {
+              if (typeof tx === 'object' && tx.from && tx.to) {
+                // Check if this is a transaction from our user to the Comet contract
+                if (tx.from.toLowerCase() === address?.toLowerCase() && 
+                    tx.to.toLowerCase() === COMET_ADDRESS.toLowerCase()) {
+                  
+                  // Get transaction receipt to see if it was successful
+                  try {
+                    const receipt = await publicClient.getTransactionReceipt({ hash: tx.hash })
+                    
+                    if (receipt.status === 'success') {
+                      // Parse transaction data to determine type and amount
+                      let type: Transaction['type'] = 'supply'
+                      let asset = 'USDC'
+                      let amount = '0'
 
-          let type: Transaction["type"] = "supply"
-          let asset = "UNKNOWN"
-          let amount = "0"
-          let user = "unknown"
+                      // Analyze the transaction receipt logs to determine the actual operation
+                      if (receipt.logs && receipt.logs.length > 0) {
+                        console.log(`🔍 Analyzing logs for tx ${tx.hash}:`, receipt.logs.length, 'logs')
+                        
+                        // Look for specific event signatures in the logs
+                        for (const log of receipt.logs) {
+                          if (log.topics && log.topics.length >= 1) {
+                            const eventSignature = log.topics[0]
+                            console.log(`🔍 Event signature: ${eventSignature}`)
+                            
+                            // Compound V3 event signatures
+                            if (eventSignature === '0xd1cf3d156d5f8f0d50f6c122ed609cec09d35c9b9fb3fff6ea0959134dae424e') {
+                              // Supply event
+                              type = 'supply'
+                              asset = 'USDC'
+                              if (log.data && log.data !== '0x') {
+                                const amountBigInt = BigInt(log.data)
+                                amount = (Number(amountBigInt) / 1e6).toFixed(2)
+                                console.log(`💰 Supply event: ${amountBigInt.toString()} -> ${amount} USDC`)
+                              }
+                              break
+                            } else if (eventSignature === '0x9b1bfa7fa9ee420a16e124f794c35ac9f90472acc99140eb2f6447c714cad8eb') {
+                              // Withdraw event
+                              type = 'withdraw'
+                              asset = 'USDC'
+                              if (log.data && log.data !== '0x') {
+                                const amountBigInt = BigInt(log.data)
+                                amount = (Number(amountBigInt) / 1e6).toFixed(2)
+                                console.log(`💰 Withdraw event: ${amountBigInt.toString()} -> ${amount} USDC`)
+                              }
+                              break
+                            } else if (eventSignature === '0xfa56f7b24f17183d81894d3ac2ee654e3c26388d17a28dbd9549b8114304e1f4') {
+                              // SupplyCollateral event
+                              type = 'supplyCollateral'
+                              asset = 'WETH'
+                              if (log.data && log.data !== '0x') {
+                                const amountBigInt = BigInt(log.data)
+                                amount = (Number(amountBigInt) / 1e18).toFixed(6)
+                                console.log(`�� SupplyCollateral event: ${amountBigInt.toString()} -> ${amount} WETH`)
+                              }
+                              break
+                            } else if (eventSignature === '0xd6d480d5b3068db003533b170d67561494d72e3bf9fa40a266471351ebba9e16') {
+                              // WithdrawCollateral event
+                              type = 'withdrawCollateral'
+                              asset = 'WETH'
+                              if (log.data && log.data !== '0x') {
+                                const amountBigInt = BigInt(log.data)
+                                amount = (Number(amountBigInt) / 1e18).toFixed(6)
+                                console.log(`💰 WithdrawCollateral event: ${amountBigInt.toString()} -> ${amount} WETH`)
+                              }
+                              break
+                            }
+                          }
+                        }
+                        
+                        // If no specific event found, try to extract from Transfer events
+                        if (type === 'supply' && amount === '0') {
+                          console.log(`🔍 No specific event found, checking Transfer events...`)
+                          for (const log of receipt.logs) {
+                            if (log.topics && log.topics.length >= 3) {
+                              const eventSignature = log.topics[0]
+                              // Transfer event signature: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+                              if (eventSignature === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
+                                const amountHex = log.data
+                                if (amountHex && amountHex !== '0x') {
+                                  const amountBigInt = BigInt(amountHex)
+                                  // Determine if it's USDC (6 decimals) or WETH (18 decimals) based on token address
+                                  const tokenAddress = log.address.toLowerCase()
+                                  if (tokenAddress === '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48') { // USDC
+                                    amount = (Number(amountBigInt) / 1e6).toFixed(2)
+                                    asset = 'USDC'
+                                    console.log(`💰 Transfer amount from log: ${amountBigInt.toString()} -> ${amount} ${asset}`)
+                                  } else if (tokenAddress === '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2') { // WETH
+                                    amount = (Number(amountBigInt) / 1e18).toFixed(6)
+                                    asset = 'WETH'
+                                    console.log(`💰 Transfer amount from log: ${amountBigInt.toString()} -> ${amount} ${asset}`)
+                                  }
+                                  break
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
 
-          if (log.topics && log.topics.length >= 2) {
-            user = ("0x" + log.topics[1].slice(26)) as `0x${string}`
+                      userTransactions.push({
+                        type,
+                        asset,
+                        amount,
+                        timestamp: Number(block.timestamp) * 1000,
+                        hash: tx.hash,
+                        user: tx.from
+                      })
+
+                      console.log("✅ Found transaction:", { type, asset, amount, hash: tx.hash })
+                    }
+                  } catch (receiptError) {
+                    console.warn("⚠️ Could not get receipt for tx:", tx.hash)
+                  }
+                }
+              }
+            }
           }
-
-          if (eventTopic === EVENT_TOPICS.supplyCollateral) {
-            type = "supplyCollateral"
-            asset = "WETH"
-            if (log.data && log.data !== "0x") amount = (Number(BigInt(log.data)) / 1e18).toFixed(6)
-          } else if (eventTopic === EVENT_TOPICS.withdrawCollateral) {
-            type = "withdrawCollateral"
-            asset = "WETH"
-            if (log.data && log.data !== "0x") amount = (Number(BigInt(log.data)) / 1e18).toFixed(6)
-          } else if (eventTopic === EVENT_TOPICS.supply) {
-            type = "supply"
-            asset = "USDC"
-            if (log.data && log.data !== "0x") amount = (Number(BigInt(log.data)) / 1e6).toFixed(2)
-          } else if (eventTopic === EVENT_TOPICS.withdraw) {
-            type = "withdraw"
-            asset = "USDC"
-            if (log.data && log.data !== "0x") amount = (Number(BigInt(log.data)) / 1e6).toFixed(2)
-          }
-
-          if (!log.blockNumber) continue
-          if (!log.transactionHash) continue
-          const block = await publicClient.getBlock({ blockNumber: log.blockNumber as bigint })
-          const timestamp = Number(block.timestamp) * 1000
-
-          parsed.push({ type, asset, amount, timestamp, hash: log.transactionHash!, user })
+        } catch (blockError) {
+          console.warn("⚠️ Error processing block:", blockNum.toString())
         }
-
-        parsed.sort((a, b) => b.timestamp - a.timestamp)
-        setTransactions(parsed)
-      } catch (err: any) {
-        const msg = err?.shortMessage || err?.message || "Failed to load transaction history"
-        setError(msg)
-        setTransactions([])
-      } finally {
-        setLoading(false)
       }
-    }
 
-    fetchTransactions()
-  }, [isConnected, address])
+      // Sort by timestamp (newest first)
+      userTransactions.sort((a, b) => b.timestamp - a.timestamp)
+      
+      console.log("📊 Total transactions found:", userTransactions.length)
+      setTransactions(userTransactions)
+
+    } catch (err: any) {
+      console.error("❌ Error fetching transactions:", err)
+      setError(err.message || "Failed to load transaction history")
+    } finally {
+      setLoading(false)
+      console.log("🏁 Transaction fetch completed")
+    }
+  }
+
+  useEffect(() => {
+    if (mounted && isConnected) {
+      fetchTransactions()
+    }
+  }, [mounted, isConnected, address])
 
   if (!mounted) return null
 
@@ -137,18 +225,18 @@ export function TransactionHistory() {
     }
   }
 
-  const getTransactionLabel = (type: string) => {
+  const getTransactionLabel = (type: string, asset: string) => {
     switch (type) {
       case "supplyCollateral":
-        return "Supplied Collateral"
+        return `Supplied ${asset} as Collateral`
       case "withdrawCollateral":
-        return "Withdrew Collateral"
+        return `Withdrew ${asset} Collateral`
       case "supply":
-        return "Supplied Base"
+        return `Supplied ${asset}`
       case "withdraw":
-        return "Withdrew Base"
+        return `Withdrew ${asset}`
       default:
-        return "Unknown Transaction"
+        return `Unknown ${asset} Transaction`
     }
   }
 
@@ -165,22 +253,38 @@ export function TransactionHistory() {
     }
   }
 
-  const isUserTransaction = (tx: Transaction) => {
-    if (!address) return false
-    return tx.user.toLowerCase() === address.toLowerCase()
+  const getAssetDisplayName = (asset: string) => {
+    switch (asset) {
+      case "USDC":
+        return "USDC"
+      case "WETH":
+        return "WETH"
+      default:
+        return asset
+    }
   }
-
-  const userTransactions = transactions.filter(isUserTransaction)
-  const recentTransactions = transactions.slice(0, 10) // Show recent 10 for demo
 
   return (
     <div className="p-4 pb-24">
       <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
         <CardHeader>
-          <CardTitle className="text-xl">Transaction History</CardTitle>
-          <CardDescription className="text-gray-400">
-            {!isConnected ? "Connect your wallet to see your transactions" : "Your recent activities"}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">Transaction History</CardTitle>
+              <CardDescription className="text-gray-400">
+                {!isConnected ? "Connect your wallet to see your transactions" : "Your recent Compound V3 activities"}
+              </CardDescription>
+            </div>
+            {isConnected && (
+              <button
+                onClick={fetchTransactions}
+                disabled={loading}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -192,108 +296,55 @@ export function TransactionHistory() {
             <div className="text-center py-8 text-red-400">
               <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
               <p className="mb-2">{error}</p>
-              <p className="text-sm text-gray-500">Check console for details</p>
+              <button 
+                onClick={fetchTransactions}
+                className="text-sm text-blue-400 hover:text-blue-300"
+              >
+                Try again
+              </button>
             </div>
           ) : transactions.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
-              <p>No transactions found on this contract</p>
-              <p className="text-sm mt-2">Try performing some supply/withdraw actions first</p>
+              <p>No transactions found</p>
+              <p className="text-sm mt-2">Perform some supply/withdraw actions to see them here</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {/* User's transactions */}
-              {isConnected && userTransactions.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-medium mb-3 text-green-400">Your Transactions</h3>
-                  <div className="space-y-3">
-                    {userTransactions.map((tx) => (
-                      <div key={tx.hash} className="bg-[#252836] p-3 rounded-lg border border-green-900/30">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
-                              <div className={`${getTransactionBg(tx.type)} p-2 rounded-full`}>
-                                {getTransactionIcon(tx.type)}
-                              </div>
-                              <CryptoIcon symbol={tx.asset} size={20} />
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {getTransactionLabel(tx.type)} ({tx.asset})
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {formatDate(tx.timestamp / 1000)}
-                              </div>
-                              <div className="text-xs text-green-400 font-mono">
-                                {tx.hash.slice(0, 10)}...{tx.hash.slice(-8)}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {getTransactionPrefix(tx.type)}
-                              {formatCurrency(parseFloat(tx.amount), tx.asset)}
-                            </div>
-                          </div>
+            <div className="space-y-3">
+              {transactions.map((tx) => (
+                <div key={tx.hash} className="bg-[#252836] p-3 rounded-lg border border-green-900/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`${getTransactionBg(tx.type)} p-2 rounded-full`}>
+                          {getTransactionIcon(tx.type)}
+                        </div>
+                        <CryptoIcon symbol={tx.asset} size={20} />
+                      </div>
+                      <div>
+                        <div className="font-medium">
+                          {getTransactionLabel(tx.type, getAssetDisplayName(tx.asset))}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {formatDate(tx.timestamp / 1000)}
+                        </div>
+                        <div className="text-xs text-green-400 font-mono">
+                          {tx.hash.slice(0, 10)}...{tx.hash.slice(-8)}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recent transactions on contract */}
-              {isConnected && userTransactions.length === 0 && recentTransactions.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-medium mb-3 text-blue-400">Recent Contract Activity</h3>
-                  <p className="text-sm text-gray-400 mb-3">No transactions found for your account. Here are recent transactions on the contract:</p>
-                  <div className="space-y-3">
-                    {recentTransactions.map((tx) => (
-                      <div key={tx.hash} className="bg-[#252836] p-3 rounded-lg opacity-75">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
-                              <div className={`${getTransactionBg(tx.type)} p-2 rounded-full`}>
-                                {getTransactionIcon(tx.type)}
-                              </div>
-                              <CryptoIcon symbol={tx.asset} size={20} />
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {getTransactionLabel(tx.type)} ({tx.asset})
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {formatDate(tx.timestamp / 1000)}
-                              </div>
-                              <div className="text-xs text-gray-500 font-mono">
-                                {tx.user.slice(0, 6)}...{tx.user.slice(-4)}
-                              </div>
-                              <div className="text-xs text-gray-500 font-mono">
-                                {tx.hash.slice(0, 10)}...{tx.hash.slice(-8)}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {getTransactionPrefix(tx.type)}
-                              {formatCurrency(parseFloat(tx.amount), tx.asset)}
-                            </div>
-                          </div>
-                        </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {getTransactionPrefix(tx.type)}
+                        {formatCurrency(parseFloat(tx.amount), tx.asset)}
                       </div>
-                    ))}
+                      <div className="text-xs text-gray-400">
+                        {getAssetDisplayName(tx.asset)}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {/* No transactions at all */}
-              {isConnected && userTransactions.length === 0 && recentTransactions.length === 0 && (
-                <div className="text-center py-8 text-gray-400">
-                  <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                  <p>No transactions found</p>
-                  <p className="text-sm mt-2">Be the first to perform a supply/withdraw action!</p>
-                </div>
-              )}
+              ))}
             </div>
           )}
         </CardContent>
