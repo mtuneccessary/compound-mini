@@ -6,51 +6,39 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useCompound } from "@/lib/compound-provider"
-import { formatCurrency, formatPercentage } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils"
 import { ArrowUpRight } from "lucide-react"
-import { useTelegram } from "@/lib/telegram-provider"
 import { Progress } from "@/components/ui/progress"
 import { CryptoIcon } from "./crypto-icon"
 import { useFeedback } from "@/lib/feedback-provider"
+import cometAbi from "@/lib/abis/comet.json"
+import erc20Abi from "@/lib/abis/erc20.json"
 
 export function WithdrawForm() {
-  const { suppliedAssets, withdrawAsset, totalBorrowed, borrowLimit, borrowLimitUsed, isLoading } = useCompound()
-  const { showConfirm } = useTelegram()
   const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
 
-  const [selectedAsset, setSelectedAsset] = useState("")
+  const [selectedAsset, setSelectedAsset] = useState("WETH")
   const [amount, setAmount] = useState("")
-  const [newBorrowLimitUsed, setNewBorrowLimitUsed] = useState(borrowLimitUsed)
   const [mounted, setMounted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const COMET_ADDRESS = (process.env.NEXT_PUBLIC_COMET_ADDRESS as `0x${string}`) || "0xc3d688B66703497DAA19211EEdff47f25384cdc3"
+  const LOCAL_CHAIN_ID = 31337
+
+  const COLLATERALS: Record<string, { address: `0x${string}`; decimals: number }> = {
+    WETH: { address: (process.env.NEXT_PUBLIC_WETH_ADDRESS as `0x${string}`) || "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", decimals: 18 },
+    WBTC: { address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", decimals: 8 },
+    LINK: { address: "0x514910771AF9Ca656af840dff83E8264EcF986CA", decimals: 18 },
+    UNI: { address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", decimals: 18 },
+    wstETH: { address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0", decimals: 18 },
+    cbBTC: { address: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf", decimals: 8 },
+  }
 
   useEffect(() => {
     setMounted(true)
-    if (suppliedAssets.length > 0) {
-      setSelectedAsset(suppliedAssets[0].symbol)
-    }
-  }, [suppliedAssets])
-
-  useEffect(() => {
-    if (amount && selectedAsset) {
-      const suppliedAsset = suppliedAssets.find((a) => a.symbol === selectedAsset)
-      if (suppliedAsset) {
-        const amountValue = Number.parseFloat(amount) || 0
-        const assetValue = amountValue * suppliedAsset.price
-        const assetCollateralValue = assetValue * suppliedAsset.collateralFactor
-        const newBorrowLimit = borrowLimit - assetCollateralValue
-        const newUsed = newBorrowLimit > 0 ? (totalBorrowed / newBorrowLimit) * 100 : 100
-        setNewBorrowLimitUsed(newUsed)
-      }
-    } else {
-      setNewBorrowLimitUsed(borrowLimitUsed)
-    }
-  }, [amount, selectedAsset, borrowLimit, totalBorrowed, borrowLimitUsed, suppliedAssets])
+  }, [])
 
   if (!mounted) return null
-
-  const selectedAssetData = suppliedAssets.find((a) => a.symbol === selectedAsset)
-  const maxWithdrawAmount = selectedAssetData ? selectedAssetData.amount : 0
 
   const handleWithdraw = async () => {
     if (!selectedAsset || !amount || Number.parseFloat(amount) <= 0) {
@@ -58,62 +46,49 @@ export function WithdrawForm() {
       return
     }
 
-    if (!selectedAssetData || Number.parseFloat(amount) > selectedAssetData.amount) {
-      showError("Insufficient balance", "You don't have enough supplied balance")
-      return
-    }
+    try {
+      setIsSubmitting(true)
+      showLoading(`Withdrawing ${amount} ${selectedAsset}...`)
+      const { ethers } = await import("ethers")
+      if (!(window as any).ethereum) throw new Error("No wallet")
+      const provider = new ethers.BrowserProvider((window as any).ethereum)
+      const network = await provider.getNetwork()
+      if (Number(network.chainId) !== LOCAL_CHAIN_ID) throw new Error("Wrong network")
+      const signer = await provider.getSigner()
+      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, signer)
 
-    // Check if withdrawal would put position at risk
-    if (newBorrowLimitUsed > 100) {
-      showError("Withdrawal would put your position at risk", "This withdrawal would exceed your borrow limit")
-      return
-    }
+      const assetCfg = COLLATERALS[selectedAsset]
+      if (!assetCfg) throw new Error("Unsupported asset")
+      const raw = ethers.parseUnits(amount, assetCfg.decimals)
 
-    const confirmed = await showConfirm(`Withdraw ${amount} ${selectedAsset}?`)
-    if (confirmed) {
-      try {
-        showLoading(`Withdrawing ${amount} ${selectedAsset}...`)
-        await withdrawAsset(selectedAsset, Number.parseFloat(amount))
-        hideLoading()
-        showSuccess("Withdrawal successful", `You have withdrawn ${amount} ${selectedAsset}`)
-        setAmount("")
-      } catch (error: any) {
-        hideLoading()
-        showError("Withdrawal failed", error.message || "An error occurred while withdrawing")
-      }
+      const latest = await provider.getBlock("latest")
+      const base = latest?.baseFeePerGas ?? 0n
+      const maxPriorityFeePerGas = ethers.parseUnits("1", "gwei")
+      const txOpts = { maxFeePerGas: base * 2n + maxPriorityFeePerGas, maxPriorityFeePerGas }
+
+      await (await comet.withdraw(assetCfg.address, raw, txOpts)).wait()
+      hideLoading()
+      showSuccess("Withdrawal successful", `You have withdrawn ${amount} ${selectedAsset}`)
+      setAmount("")
+    } catch (error: any) {
+      hideLoading()
+      showError("Withdrawal failed", error?.shortMessage || error?.message || "An error occurred while withdrawing")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  const handleMaxClick = () => {
-    if (selectedAssetData) {
-      setAmount(selectedAssetData.amount.toString())
-    }
-  }
-
-  const limitColor = newBorrowLimitUsed > 80 ? "bg-red-500" : newBorrowLimitUsed > 60 ? "bg-yellow-500" : "bg-blue-500"
-
-  if (suppliedAssets.length === 0) {
-    return (
-      <div className="p-4">
-        <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-          <CardHeader>
-            <CardTitle className="text-xl">Withdraw Assets</CardTitle>
-            <CardDescription className="text-gray-400">Withdraw your supplied assets</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-gray-400">
-              <p>You don't have any supplied assets to withdraw</p>
-              <Button
-                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => (window.location.href = "/supply")}
-              >
-                Supply Assets First
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const handleMaxClick = async () => {
+    // Query on-protocol collateral balance and set to UI
+    try {
+      const { ethers } = await import("ethers")
+      const provider = new ethers.BrowserProvider((window as any).ethereum)
+      const address = await provider.send("eth_requestAccounts", []).then((a) => a[0])
+      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, provider)
+      const assetCfg = COLLATERALS[selectedAsset]
+      const bal: bigint = await comet.collateralBalanceOf(address, assetCfg.address)
+      setAmount((Number(bal) / 10 ** assetCfg.decimals).toString())
+    } catch {}
   }
 
   return (
@@ -121,7 +96,7 @@ export function WithdrawForm() {
       <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
         <CardHeader>
           <CardTitle className="text-xl">Withdraw Assets</CardTitle>
-          <CardDescription className="text-gray-400">Withdraw your supplied assets</CardDescription>
+          <CardDescription className="text-gray-400">Withdraw your supplied collateral</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -138,13 +113,11 @@ export function WithdrawForm() {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-[#252836] border-[#2a2d36] text-white">
-                {suppliedAssets.map((asset) => (
-                  <SelectItem key={asset.symbol} value={asset.symbol}>
+                {Object.keys(COLLATERALS).map((sym) => (
+                  <SelectItem key={sym} value={sym}>
                     <div className="flex items-center gap-2">
-                      <CryptoIcon symbol={asset.symbol} size={20} />
-                      <span>
-                        {asset.symbol} - {formatCurrency(asset.amount, asset.symbol)}
-                      </span>
+                      <CryptoIcon symbol={sym} size={20} />
+                      <span>{sym}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -155,9 +128,7 @@ export function WithdrawForm() {
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="amount">Amount</Label>
-              <span className="text-xs text-gray-400">
-                Supplied: {selectedAssetData ? formatCurrency(selectedAssetData.amount, selectedAsset) : "0"}
-              </span>
+              <span className="text-xs text-gray-400">Use MAX to withdraw all collateral</span>
             </div>
             <div className="relative">
               <Input
@@ -179,54 +150,20 @@ export function WithdrawForm() {
             </div>
           </div>
 
-          {totalBorrowed > 0 && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">New Borrow Limit Used</span>
-                <span className={newBorrowLimitUsed > 100 ? "text-red-500" : ""}>{newBorrowLimitUsed.toFixed(2)}%</span>
-              </div>
-              <Progress
-                value={Math.min(newBorrowLimitUsed, 100)}
-                className="h-2 bg-[#252836]"
-                indicatorClassName={limitColor}
-              />
-              <div className="flex justify-between text-xs text-gray-400">
-                <span>0%</span>
-                <span>Safe</span>
-                <span>100%</span>
-              </div>
-            </div>
-          )}
-
           <div className="bg-[#252836] p-3 rounded-lg space-y-2">
             <div className="text-sm font-medium">Withdrawal Information</div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">You will receive</span>
-              <span>
-                {amount && selectedAsset ? formatCurrency(Number.parseFloat(amount) || 0, selectedAsset) : "0"}
-              </span>
+              <span>{amount && selectedAsset ? formatCurrency(Number.parseFloat(amount) || 0, selectedAsset) : "0"}</span>
             </div>
-            {selectedAssetData && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Current APY</span>
-                <span>{formatPercentage(selectedAssetData.interestRate)}</span>
-              </div>
-            )}
           </div>
 
           <Button
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             onClick={handleWithdraw}
-            disabled={
-              isLoading ||
-              !amount ||
-              Number.parseFloat(amount) <= 0 ||
-              !selectedAssetData ||
-              Number.parseFloat(amount) > selectedAssetData.amount ||
-              newBorrowLimitUsed > 100
-            }
+            disabled={!amount || Number.parseFloat(amount) <= 0 || isSubmitting}
           >
-            {isLoading ? (
+            {isSubmitting ? (
               <div className="flex items-center">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                 Processing...

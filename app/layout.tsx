@@ -2,9 +2,9 @@ import type React from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { TelegramProvider } from "@/lib/telegram-provider"
-import { CompoundProvider } from "@/lib/compound-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { FeedbackProvider } from "@/lib/feedback-provider"
+import { AppWagmiProvider } from "@/lib/wagmi-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,14 +22,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <TelegramProvider>
-          <CompoundProvider>
+        <AppWagmiProvider>
+          <TelegramProvider>
             <FeedbackProvider>
               {children}
               <Toaster />
             </FeedbackProvider>
-          </CompoundProvider>
-        </TelegramProvider>
+          </TelegramProvider>
+        </AppWagmiProvider>
       </body>
     </html>
   )

@@ -6,56 +6,48 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatPercentage } from "@/lib/utils"
 import { ArrowDownRight } from "lucide-react"
-import { useTelegram } from "@/lib/telegram-provider"
 import { Progress } from "@/components/ui/progress"
 import { CryptoIcon } from "./crypto-icon"
 import { useFeedback } from "@/lib/feedback-provider"
+import cometAbi from "@/lib/abis/comet.json"
 
 export function BorrowForm() {
-  const { availableAssets, borrowAsset, borrowLimit, totalBorrowed, borrowLimitUsed, isLoading } = useCompound()
-  const { showConfirm } = useTelegram()
   const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
 
-  const [selectedAsset, setSelectedAsset] = useState("")
+  const [selectedAsset, setSelectedAsset] = useState("USDC")
   const [amount, setAmount] = useState("")
   const [estimatedApr, setEstimatedApr] = useState(0)
-  const [newBorrowLimitUsed, setNewBorrowLimitUsed] = useState(borrowLimitUsed)
+  const [newBorrowLimitUsed, setNewBorrowLimitUsed] = useState(0)
   const [mounted, setMounted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}`) || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+  const COMET_ADDRESS = (process.env.NEXT_PUBLIC_COMET_ADDRESS as `0x${string}`) || "0xc3d688B66703497DAA19211EEdff47f25384cdc3"
+  const LOCAL_CHAIN_ID = 31337
 
   useEffect(() => {
     setMounted(true)
-    if (availableAssets.length > 0) {
-      setSelectedAsset(availableAssets[0].symbol)
-    }
-  }, [availableAssets])
+  }, [])
 
   useEffect(() => {
-    if (selectedAsset) {
-      const asset = availableAssets.find((a) => a.symbol === selectedAsset)
-      if (asset) {
-        setEstimatedApr(asset.borrowRate)
-      }
+    // Fetch rates from Comet for display
+    async function fetchRates() {
+      try {
+        const { ethers } = await import("ethers")
+        const provider = new ethers.BrowserProvider((window as any).ethereum)
+        const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, provider)
+        const util: bigint = await comet.getUtilization()
+        const rate: bigint = await comet.getBorrowRate(util)
+        const apr = Number((rate * 31536000n * 100n) / (10n ** 18n))
+        setEstimatedApr(apr)
+      } catch {}
     }
-  }, [selectedAsset, availableAssets])
-
-  useEffect(() => {
-    if (amount && selectedAsset) {
-      const amountValue = Number.parseFloat(amount) || 0
-      const newTotalBorrowed = totalBorrowed + amountValue
-      const newUsed = (newTotalBorrowed / borrowLimit) * 100
-      setNewBorrowLimitUsed(newUsed)
-    } else {
-      setNewBorrowLimitUsed(borrowLimitUsed)
-    }
-  }, [amount, selectedAsset, borrowLimit, totalBorrowed, borrowLimitUsed])
+    if (mounted && typeof window !== "undefined" && (window as any).ethereum) fetchRates()
+  }, [mounted, COMET_ADDRESS])
 
   if (!mounted) return null
-
-  const selectedAssetData = availableAssets.find((a) => a.symbol === selectedAsset)
-  const maxBorrowAmount = borrowLimit - totalBorrowed
 
   const handleBorrow = async () => {
     if (!selectedAsset || !amount || Number.parseFloat(amount) <= 0) {
@@ -63,28 +55,47 @@ export function BorrowForm() {
       return
     }
 
-    if (Number.parseFloat(amount) > maxBorrowAmount) {
-      showError("Exceeds borrow limit", "Amount exceeds your borrow limit")
-      return
-    }
+    try {
+      setIsSubmitting(true)
+      showLoading(`Borrowing ${amount} ${selectedAsset}...`)
+      const { ethers } = await import("ethers")
+      if (!(window as any).ethereum) throw new Error("No wallet")
+      const provider = new ethers.BrowserProvider((window as any).ethereum)
+      const network = await provider.getNetwork()
+      if (Number(network.chainId) !== LOCAL_CHAIN_ID) throw new Error("Wrong network")
+      const signer = await provider.getSigner()
+      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, signer)
 
-    const confirmed = await showConfirm(`Borrow ${amount} ${selectedAsset}?`)
-    if (confirmed) {
-      try {
-        showLoading(`Borrowing ${amount} ${selectedAsset}...`)
-        await borrowAsset(selectedAsset, Number.parseFloat(amount))
-        hideLoading()
-        showSuccess("Borrow successful", `You have borrowed ${amount} ${selectedAsset}`)
-        setAmount("")
-      } catch (error: any) {
-        hideLoading()
-        showError("Borrow failed", error.message || "An error occurred while borrowing")
-      }
+      const minBorrow: bigint = await comet.baseBorrowMin()
+      const raw = ethers.parseUnits(amount, 6)
+      if (raw < minBorrow) throw new Error(`Minimum borrow is ${Number(minBorrow) / 1e6} USDC`)
+
+      const latest = await provider.getBlock("latest")
+      const base = latest?.baseFeePerGas ?? 0n
+      const maxPriorityFeePerGas = ethers.parseUnits("1", "gwei")
+      const txOpts = { maxFeePerGas: base * 2n + maxPriorityFeePerGas, maxPriorityFeePerGas }
+
+      await (await comet.withdraw(USDC_ADDRESS, raw, txOpts)).wait()
+      hideLoading()
+      showSuccess("Borrow successful", `You have borrowed ${amount} ${selectedAsset}`)
+      setAmount("")
+    } catch (error: any) {
+      hideLoading()
+      showError("Borrow failed", error?.shortMessage || error?.message || "An error occurred while borrowing")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  const handleMaxClick = () => {
-    setAmount(maxBorrowAmount.toString())
+  const handleMaxClick = async () => {
+    // For simplicity, set to baseBorrowMin in UI
+    try {
+      const { ethers } = await import("ethers")
+      const provider = new ethers.BrowserProvider((window as any).ethereum)
+      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, provider)
+      const minBorrow: bigint = await comet.baseBorrowMin()
+      setAmount((Number(minBorrow) / 1e6).toString())
+    } catch {}
   }
 
   const limitColor = newBorrowLimitUsed > 80 ? "bg-red-500" : newBorrowLimitUsed > 60 ? "bg-yellow-500" : "bg-blue-500"
@@ -111,16 +122,12 @@ export function BorrowForm() {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-[#252836] border-[#2a2d36] text-white">
-                {availableAssets.map((asset) => (
-                  <SelectItem key={asset.symbol} value={asset.symbol}>
-                    <div className="flex items-center gap-2">
-                      <CryptoIcon symbol={asset.symbol} size={20} />
-                      <span>
-                        {asset.symbol} - {asset.name}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
+                <SelectItem value="USDC">
+                  <div className="flex items-center gap-2">
+                    <CryptoIcon symbol="USDC" size={20} />
+                    <span>USDC - USD Coin</span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -128,7 +135,7 @@ export function BorrowForm() {
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="amount">Amount</Label>
-              <span className="text-xs text-gray-400">Available: {formatCurrency(maxBorrowAmount, selectedAsset)}</span>
+              <span className="text-xs text-gray-400">Min borrow respects protocol baseBorrowMin</span>
             </div>
             <div className="relative">
               <Input
@@ -145,21 +152,8 @@ export function BorrowForm() {
                 className="absolute right-1 top-1 h-7 text-xs text-blue-400 hover:text-blue-300"
                 onClick={handleMaxClick}
               >
-                MAX
+                MIN
               </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Borrow Limit Used</span>
-              <span>{newBorrowLimitUsed.toFixed(2)}%</span>
-            </div>
-            <Progress value={newBorrowLimitUsed} className="h-2 bg-[#252836]" indicatorClassName={limitColor} />
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>0%</span>
-              <span>Borrow Limit: {formatCurrency(borrowLimit)}</span>
-              <span>100%</span>
             </div>
           </div>
 
@@ -167,18 +161,16 @@ export function BorrowForm() {
             <div className="text-sm font-medium">Borrow Information</div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Borrow APR</span>
-              <span>{formatPercentage(estimatedApr)}</span>
+              <span>{formatPercentage(estimatedApr / 100)}</span>
             </div>
           </div>
 
           <Button
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             onClick={handleBorrow}
-            disabled={
-              isLoading || !amount || Number.parseFloat(amount) <= 0 || Number.parseFloat(amount) > maxBorrowAmount
-            }
+            disabled={!amount || Number.parseFloat(amount) <= 0 || isSubmitting}
           >
-            {isLoading ? (
+            {isSubmitting ? (
               <div className="flex items-center">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                 Processing...

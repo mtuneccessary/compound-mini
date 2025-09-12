@@ -3,14 +3,11 @@
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Home, PiggyBank, ArrowDownRight, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react"
-import { useCompound } from "@/lib/compound-provider"
 
 export function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
-  const { borrowedAssets, suppliedAssets } = useCompound()
 
-  // Determine which tab should be active
   const getActiveTab = () => {
     if (pathname === "/") return "home"
     if (pathname === "/supply") return "supply"
@@ -49,19 +46,17 @@ export function Navigation() {
         <span className="text-xs">Supply</span>
       </Button>
 
-      {suppliedAssets.length > 0 && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-            activeTab === "withdraw" ? "bg-[#252836] text-white" : "text-gray-400"
-          }`}
-          onClick={() => router.push("/withdraw")}
-        >
-          <ArrowUpRight className="h-5 w-5 mb-1" />
-          <span className="text-xs">Withdraw</span>
-        </Button>
-      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
+          activeTab === "withdraw" ? "bg-[#252836] text-white" : "text-gray-400"
+        }`}
+        onClick={() => router.push("/withdraw")}
+      >
+        <ArrowUpRight className="h-5 w-5 mb-1" />
+        <span className="text-xs">Withdraw</span>
+      </Button>
 
       <Button
         variant="ghost"
@@ -75,19 +70,17 @@ export function Navigation() {
         <span className="text-xs">Borrow</span>
       </Button>
 
-      {borrowedAssets.length > 0 && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-            activeTab === "repay" ? "bg-[#252836] text-white" : "text-gray-400"
-          }`}
-          onClick={() => router.push("/repay")}
-        >
-          <ArrowDownLeft className="h-5 w-5 mb-1" />
-          <span className="text-xs">Repay</span>
-        </Button>
-      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
+          activeTab === "repay" ? "bg-[#252836] text-white" : "text-gray-400"
+        }`}
+        onClick={() => router.push("/repay")}
+      >
+        <ArrowDownLeft className="h-5 w-5 mb-1" />
+        <span className="text-xs">Repay</span>
+      </Button>
 
       <Button
         variant="ghost"
