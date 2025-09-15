@@ -53,7 +53,7 @@ export function WelcomeMessage() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => setShowWelcome(false)}>
+          <Button variant="compound" className="w-full" onClick={() => setShowWelcome(false)}>
             Start Exploring
           </Button>
         </CardFooter>

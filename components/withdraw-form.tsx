@@ -142,7 +142,7 @@ export function WithdrawForm() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute right-1 top-1 h-7 text-xs text-blue-400 hover:text-blue-300"
+                className="absolute right-1 top-1 h-7 text-xs"
                 onClick={handleMaxClick}
               >
                 MAX
@@ -159,7 +159,8 @@ export function WithdrawForm() {
           </div>
 
           <Button
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            variant="compound"
+            className="w-full"
             onClick={handleWithdraw}
             disabled={!amount || Number.parseFloat(amount) <= 0 || isSubmitting}
           >
