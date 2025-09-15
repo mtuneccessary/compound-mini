@@ -2,13 +2,47 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Home, PiggyBank, ArrowDownRight, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react"
+import {
+  Home,
+  PiggyBank,
+  ArrowDownRight,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Clock,
+  type LucideIcon,
+} from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+type NavigationKey =
+  | "home"
+  | "supply"
+  | "withdraw"
+  | "borrow"
+  | "repay"
+  | "history"
+
+type NavigationItem = {
+  key: NavigationKey
+  label: string
+  href: string
+  icon: LucideIcon
+}
+
+const navigationItems: NavigationItem[] = [
+  { key: "home", label: "Home", href: "/", icon: Home },
+  { key: "supply", label: "Supply", href: "/supply", icon: PiggyBank },
+  { key: "withdraw", label: "Withdraw", href: "/withdraw", icon: ArrowUpRight },
+  { key: "borrow", label: "Borrow", href: "/borrow", icon: ArrowDownRight },
+  { key: "repay", label: "Repay", href: "/repay", icon: ArrowDownLeft },
+  { key: "history", label: "History", href: "/history", icon: Clock },
+]
 
 export function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
 
-  const getActiveTab = () => {
+  const getActiveTab = (): NavigationKey | "" => {
     if (pathname === "/") return "home"
     if (pathname === "/supply") return "supply"
     if (pathname === "/withdraw") return "withdraw"
@@ -21,78 +55,27 @@ export function Navigation() {
   const activeTab = getActiveTab()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#1a1d26] border-t border-[#2a2d36] p-2 flex justify-around">
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "home" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/")}
-      >
-        <Home className="h-5 w-5 mb-1" />
-        <span className="text-xs">Home</span>
-      </Button>
+    <div className="fixed bottom-0 left-0 right-0 flex justify-around border-t border-border bg-background p-2">
+      {navigationItems.map((item) => {
+        const Icon = item.icon
+        const isActive = activeTab === item.key
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "supply" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/supply")}
-      >
-        <PiggyBank className="h-5 w-5 mb-1" />
-        <span className="text-xs">Supply</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "withdraw" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/withdraw")}
-      >
-        <ArrowUpRight className="h-5 w-5 mb-1" />
-        <span className="text-xs">Withdraw</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "borrow" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/borrow")}
-      >
-        <ArrowDownRight className="h-5 w-5 mb-1" />
-        <span className="text-xs">Borrow</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "repay" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/repay")}
-      >
-        <ArrowDownLeft className="h-5 w-5 mb-1" />
-        <span className="text-xs">Repay</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "history" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/history")}
-      >
-        <Clock className="h-5 w-5 mb-1" />
-        <span className="text-xs">History</span>
-      </Button>
+        return (
+          <Button
+            key={item.key}
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "flex h-16 w-16 flex-col items-center justify-center rounded-lg text-muted-foreground",
+              isActive && "bg-primary text-primary-foreground"
+            )}
+            onClick={() => router.push(item.href)}
+          >
+            <Icon className="mb-1 h-5 w-5" />
+            <span className="text-xs">{item.label}</span>
+          </Button>
+        )
+      })}
     </div>
   )
 }
