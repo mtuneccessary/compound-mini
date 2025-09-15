@@ -53,29 +53,29 @@ export function Dashboard() {
 
 	return (
 		<div className="p-4 space-y-4 pb-24">
-			<Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-				<CardHeader className="pb-2">
-					<CardTitle className="text-xl flex justify-between">
-						<span>Dashboard</span>
-					</CardTitle>
-					<CardDescription className="text-gray-400">
-						{isConnected ? "Your on-chain positions (live from Comet v3)" : "Connect your wallet to view positions and use the actions below."}
-					</CardDescription>
-				</CardHeader>
-				{isConnected && (
-					<CardContent>
-						<div className="grid grid-cols-2 gap-4 mb-4">
-							<div className="bg-[#252836] p-3 rounded-lg">
-								<div className="text-xs text-gray-400 mb-1">Collateral (WETH)</div>
-								<div className="text-lg font-semibold">{Number(collateralWeth) / 1e18}</div>
-							</div>
-							<div className="bg-[#252836] p-3 rounded-lg">
-								<div className="text-xs text-gray-400 mb-1">Debt ({baseSymbol})</div>
-								<div className="text-lg font-semibold">{Number(baseBorrowed) / 10 ** baseDecimals}</div>
-							</div>
-						</div>
-					</CardContent>
-				)}
+                        <Card>
+                                <CardHeader className="pb-2">
+                                        <CardTitle className="text-xl flex justify-between">
+                                                <span>Dashboard</span>
+                                        </CardTitle>
+                                        <CardDescription>
+                                                {isConnected ? "Your on-chain positions (live from Comet v3)" : "Connect your wallet to view positions and use the actions below."}
+                                        </CardDescription>
+                                </CardHeader>
+                                {isConnected && (
+                                        <CardContent>
+                                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                                        <div className="rounded-lg bg-muted/60 p-3">
+                                                                <div className="mb-1 text-xs text-muted-foreground">Collateral (WETH)</div>
+                                                                <div className="text-lg font-semibold">{Number(collateralWeth) / 1e18}</div>
+                                                        </div>
+                                                        <div className="rounded-lg bg-muted/60 p-3">
+                                                                <div className="mb-1 text-xs text-muted-foreground">Debt ({baseSymbol})</div>
+                                                                <div className="text-lg font-semibold">{Number(baseBorrowed) / 10 ** baseDecimals}</div>
+                                                        </div>
+                                                </div>
+                                        </CardContent>
+                                )}
 			</Card>
 		</div>
 	)

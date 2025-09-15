@@ -95,16 +95,16 @@ export function RepayForm() {
 
   return (
     <div className="p-4">
-      <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+      <Card>
         <CardHeader>
           <CardTitle className="text-xl">Repay Debt</CardTitle>
-          <CardDescription className="text-gray-400">Repay your borrowed assets</CardDescription>
+          <CardDescription>Repay your borrowed assets</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="asset">Asset</Label>
             <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-              <SelectTrigger id="asset" className="bg-[#252836] border-[#2a2d36]">
+              <SelectTrigger id="asset" className="bg-muted/60">
                 <SelectValue placeholder="Select asset">
                   {selectedAsset && (
                     <div className="flex items-center gap-2">
@@ -114,7 +114,7 @@ export function RepayForm() {
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-[#252836] border-[#2a2d36] text-white">
+              <SelectContent>
                 <SelectItem value="USDC">
                   <div className="flex items-center gap-2">
                     <CryptoIcon symbol="USDC" size={20} />
@@ -128,7 +128,7 @@ export function RepayForm() {
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="amount">Amount</Label>
-              <span className="text-xs text-gray-400">Debt: {formatCurrency(Number(currentDebt) / 1e6, "USDC")}</span>
+              <span className="text-xs text-muted-foreground">Debt: {formatCurrency(Number(currentDebt) / 1e6, "USDC")}</span>
             </div>
             <div className="relative">
               <Input
@@ -137,12 +137,12 @@ export function RepayForm() {
                 placeholder="0.0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="bg-[#252836] border-[#2a2d36] pr-16"
+                className="bg-muted/60 pr-16"
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute right-1 top-1 h-7 text-xs text-blue-400 hover:text-blue-300"
+                className="absolute right-1 top-1 h-7 text-xs text-primary hover:text-primary/80"
                 onClick={handleMaxClick}
               >
                 MAX
@@ -150,14 +150,14 @@ export function RepayForm() {
             </div>
           </div>
 
-          <div className="bg-[#252836] p-3 rounded-lg space-y-2">
+          <div className="space-y-2 rounded-lg bg-muted/60 p-3">
             <div className="text-sm font-medium">Repayment Information</div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Current Debt</span>
+              <span className="text-muted-foreground">Current Debt</span>
               <span>{formatCurrency(Number(currentDebt) / 1e6, "USDC")}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Remaining After Repayment</span>
+              <span className="text-muted-foreground">Remaining After Repayment</span>
               <span>{formatCurrency(Math.max(Number(currentDebt) / 1e6 - (Number.parseFloat(amount) || 0), 0), "USDC")}</span>
             </div>
           </div>

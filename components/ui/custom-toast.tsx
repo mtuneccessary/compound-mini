@@ -10,7 +10,7 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[#252836] text-white border border-[#2a2d36]",
+        default: "border border-border bg-card/95 text-card-foreground backdrop-blur supports-[backdrop-filter]:bg-card/80",
         success: "bg-green-900/80 text-white border border-green-700",
         destructive: "bg-red-900/80 text-white border border-red-700",
       },
@@ -63,7 +63,7 @@ export function CustomToast({ title, description, variant, position, duration = 
           setIsVisible(false)
           if (onClose) setTimeout(onClose, 300)
         }}
-        className="ml-4 p-1 rounded-full hover:bg-black/20"
+        className="ml-4 rounded-full p-1 transition-colors hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <X className="h-4 w-4" />
       </button>

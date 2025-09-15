@@ -21,7 +21,7 @@ export function WelcomeMessage() {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <Card className="bg-[#1a1d26] border-[#2a2d36] text-white max-w-md w-full">
+      <Card className="max-w-md w-full">
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-xl">Welcome to Compound Finance</CardTitle>
@@ -29,7 +29,7 @@ export function WelcomeMessage() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <CardDescription className="text-gray-400">DeFi Lending & Borrowing Simulation</CardDescription>
+          <CardDescription>DeFi Lending & Borrowing Simulation</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p>
@@ -40,7 +40,7 @@ export function WelcomeMessage() {
             Your wallet has been pre-loaded with 10,000 USDC and other assets for you to experiment with. All data is
             stored locally in your browser and persists between sessions.
           </p>
-          <div className="bg-[#252836] p-3 rounded-lg space-y-2">
+          <div className="rounded-lg bg-muted/60 p-3 space-y-2">
             <div className="text-sm font-medium">Simulation Features:</div>
             <ul className="text-sm space-y-1 list-disc pl-4">
               <li>Supply assets to earn interest</li>

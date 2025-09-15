@@ -58,7 +58,7 @@ export function TransactionFeedback({
       case "loading":
         return "bg-blue-900/20 border-blue-700/50"
       default:
-        return "bg-[#252836] border-[#2a2d36]"
+        return "bg-muted border-border"
     }
   }
 

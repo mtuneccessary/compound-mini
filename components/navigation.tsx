@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { Home, PiggyBank, ArrowDownRight, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react"
 
 export function Navigation() {
@@ -20,79 +21,36 @@ export function Navigation() {
 
   const activeTab = getActiveTab()
 
+  const items = [
+    { key: "home", label: "Home", icon: Home, href: "/" },
+    { key: "supply", label: "Supply", icon: PiggyBank, href: "/supply" },
+    { key: "withdraw", label: "Withdraw", icon: ArrowUpRight, href: "/withdraw" },
+    { key: "borrow", label: "Borrow", icon: ArrowDownRight, href: "/borrow" },
+    { key: "repay", label: "Repay", icon: ArrowDownLeft, href: "/repay" },
+    { key: "history", label: "History", icon: Clock, href: "/history" },
+  ] as const
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#1a1d26] border-t border-[#2a2d36] p-2 flex justify-around">
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "home" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/")}
-      >
-        <Home className="h-5 w-5 mb-1" />
-        <span className="text-xs">Home</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "supply" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/supply")}
-      >
-        <PiggyBank className="h-5 w-5 mb-1" />
-        <span className="text-xs">Supply</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "withdraw" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/withdraw")}
-      >
-        <ArrowUpRight className="h-5 w-5 mb-1" />
-        <span className="text-xs">Withdraw</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "borrow" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/borrow")}
-      >
-        <ArrowDownRight className="h-5 w-5 mb-1" />
-        <span className="text-xs">Borrow</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "repay" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/repay")}
-      >
-        <ArrowDownLeft className="h-5 w-5 mb-1" />
-        <span className="text-xs">Repay</span>
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`flex flex-col items-center justify-center h-16 w-16 rounded-lg ${
-          activeTab === "history" ? "bg-[#252836] text-white" : "text-gray-400"
-        }`}
-        onClick={() => router.push("/history")}
-      >
-        <Clock className="h-5 w-5 mb-1" />
-        <span className="text-xs">History</span>
-      </Button>
+    <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="mx-auto flex max-w-2xl items-center justify-around gap-2">
+        {items.map((item) => (
+          <Button
+            key={item.key}
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "flex h-16 w-16 flex-col items-center justify-center rounded-lg border border-transparent text-muted-foreground transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              activeTab === item.key
+                ? "border-primary/60 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80"
+                : "hover:bg-muted hover:text-foreground"
+            )}
+            onClick={() => router.push(item.href)}
+          >
+            <item.icon className="mb-1 h-5 w-5" />
+            <span className="text-xs">{item.label}</span>
+          </Button>
+        ))}
+      </div>
     </div>
   )
 }

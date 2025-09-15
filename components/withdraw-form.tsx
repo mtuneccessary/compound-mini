@@ -93,16 +93,16 @@ export function WithdrawForm() {
 
   return (
     <div className="p-4">
-      <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+      <Card>
         <CardHeader>
           <CardTitle className="text-xl">Withdraw Assets</CardTitle>
-          <CardDescription className="text-gray-400">Withdraw your supplied collateral</CardDescription>
+          <CardDescription>Withdraw your supplied collateral</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="asset">Asset</Label>
             <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-              <SelectTrigger id="asset" className="bg-[#252836] border-[#2a2d36]">
+              <SelectTrigger id="asset" className="bg-muted/60">
                 <SelectValue placeholder="Select asset">
                   {selectedAsset && (
                     <div className="flex items-center gap-2">
@@ -112,7 +112,7 @@ export function WithdrawForm() {
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-[#252836] border-[#2a2d36] text-white">
+              <SelectContent>
                 {Object.keys(COLLATERALS).map((sym) => (
                   <SelectItem key={sym} value={sym}>
                     <div className="flex items-center gap-2">
@@ -128,7 +128,7 @@ export function WithdrawForm() {
           <div className="space-y-2">
             <div className="flex justify-between">
               <Label htmlFor="amount">Amount</Label>
-              <span className="text-xs text-gray-400">Use MAX to withdraw all collateral</span>
+              <span className="text-xs text-muted-foreground">Use MAX to withdraw all collateral</span>
             </div>
             <div className="relative">
               <Input
@@ -137,12 +137,12 @@ export function WithdrawForm() {
                 placeholder="0.0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="bg-[#252836] border-[#2a2d36] pr-16"
+                className="bg-muted/60 pr-16"
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute right-1 top-1 h-7 text-xs text-blue-400 hover:text-blue-300"
+                className="absolute right-1 top-1 h-7 text-xs text-primary hover:text-primary/80"
                 onClick={handleMaxClick}
               >
                 MAX
@@ -150,10 +150,10 @@ export function WithdrawForm() {
             </div>
           </div>
 
-          <div className="bg-[#252836] p-3 rounded-lg space-y-2">
+          <div className="space-y-2 rounded-lg bg-muted/60 p-3">
             <div className="text-sm font-medium">Withdrawal Information</div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">You will receive</span>
+              <span className="text-muted-foreground">You will receive</span>
               <span>{amount && selectedAsset ? formatCurrency(Number.parseFloat(amount) || 0, selectedAsset) : "0"}</span>
             </div>
           </div>

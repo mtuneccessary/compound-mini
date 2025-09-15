@@ -208,7 +208,7 @@ export function TransactionHistory() {
       case "withdrawCollateral":
         return <ArrowDownLeft className="h-4 w-4 text-yellow-500" />
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4 text-muted-foreground" />
     }
   }
 
@@ -221,7 +221,7 @@ export function TransactionHistory() {
       case "withdrawCollateral":
         return "bg-yellow-900/30"
       default:
-        return "bg-gray-900/30"
+        return "bg-muted/60"
     }
   }
 
@@ -266,12 +266,12 @@ export function TransactionHistory() {
 
   return (
     <div className="p-4 pb-24">
-      <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl">Transaction History</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription>
                 {!isConnected ? "Connect your wallet to see your transactions" : "Your recent Compound V3 activities"}
               </CardDescription>
             </div>
@@ -279,7 +279,7 @@ export function TransactionHistory() {
               <button
                 onClick={fetchTransactions}
                 disabled={loading}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                className="rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
@@ -288,23 +288,23 @@ export function TransactionHistory() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="py-8 text-center text-muted-foreground">
               <Loader2 className="mx-auto h-8 w-8 mb-2 opacity-50 animate-spin" />
               <p>Loading transaction history...</p>
             </div>
           ) : error ? (
-            <div className="text-center py-8 text-red-400">
+            <div className="py-8 text-center text-destructive">
               <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
               <p className="mb-2">{error}</p>
-              <button 
+              <button
                 onClick={fetchTransactions}
-                className="text-sm text-blue-400 hover:text-blue-300"
+                className="rounded px-2 text-sm text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Try again
               </button>
             </div>
           ) : transactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="py-8 text-center text-muted-foreground">
               <Clock className="mx-auto h-8 w-8 mb-2 opacity-50" />
               <p>No transactions found</p>
               <p className="text-sm mt-2">Perform some supply/withdraw actions to see them here</p>
@@ -312,7 +312,7 @@ export function TransactionHistory() {
           ) : (
             <div className="space-y-3">
               {transactions.map((tx) => (
-                <div key={tx.hash} className="bg-[#252836] p-3 rounded-lg border border-green-900/30">
+                <div key={tx.hash} className="rounded-lg border border-border/60 bg-muted/40 p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2">
@@ -325,7 +325,7 @@ export function TransactionHistory() {
                         <div className="font-medium">
                           {getTransactionLabel(tx.type, getAssetDisplayName(tx.asset))}
                         </div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-xs text-muted-foreground">
                           {formatDate(tx.timestamp / 1000)}
                         </div>
                         <div className="text-xs text-green-400 font-mono">
@@ -338,7 +338,7 @@ export function TransactionHistory() {
                         {getTransactionPrefix(tx.type)}
                         {formatCurrency(parseFloat(tx.amount), tx.asset)}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-muted-foreground">
                         {getAssetDisplayName(tx.asset)}
                       </div>
                     </div>
