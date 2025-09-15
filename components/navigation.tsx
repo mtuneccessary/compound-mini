@@ -66,7 +66,7 @@ export function Navigation() {
             variant="ghost"
             size="icon"
             className={cn(
-              "flex h-16 w-16 flex-col items-center justify-center rounded-lg text-muted-foreground",
+              "flex h-16 w-16 flex-col items-center justify-center rounded-lg text-muted-foreground transition-colors duration-200",
               isActive && "bg-primary text-primary-foreground"
             )}
             onClick={() => router.push(item.href)}
