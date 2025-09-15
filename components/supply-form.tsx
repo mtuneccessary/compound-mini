@@ -182,12 +182,12 @@ export function SupplyForm() {
 								onChange={(e) => setAmount(e.target.value)}
 								className="bg-[#252836] border-[#2a2d36] pr-16"
 							/>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="absolute right-1 top-1 h-7 text-xs text-blue-400 hover:text-blue-300"
-								onClick={handleMaxClick}
-							>
+                                                        <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="absolute right-1 top-1 h-7 text-xs"
+                                                                onClick={handleMaxClick}
+                                                        >
 								MAX
 							</Button>
 						</div>
@@ -201,11 +201,12 @@ export function SupplyForm() {
 						</div>
 					</div>
 
-					<Button
-						className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-						onClick={handleSupply}
-						disabled={!isConnected || isSubmitting || !amount || Number.parseFloat(amount) <= 0}
-					>
+                                        <Button
+                                                variant="compound"
+                                                className="w-full"
+                                                onClick={handleSupply}
+                                                disabled={!isConnected || isSubmitting || !amount || Number.parseFloat(amount) <= 0}
+                                        >
 						{isSubmitting ? (
 							<div className="flex items-center">
 								<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
