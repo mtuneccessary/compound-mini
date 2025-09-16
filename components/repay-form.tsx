@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils"
 import { ArrowDownLeft } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { CryptoIcon } from "./crypto-icon"
+import Image from "next/image"
 import { useFeedback } from "@/lib/feedback-provider"
 import cometAbi from "@/lib/abis/comet.json"
 import erc20Abi from "@/lib/abis/erc20.json"
@@ -108,7 +109,25 @@ export function RepayForm() {
                 <SelectValue placeholder="Select asset">
                   {selectedAsset && (
                     <div className="flex items-center gap-2">
-                      <CryptoIcon symbol={selectedAsset} size={20} />
+                      {selectedAsset === 'USDC' ? (
+                        <Image 
+                          src="/usdc-icon.webp" 
+                          alt="USDC" 
+                          width={20} 
+                          height={20} 
+                          className="rounded-full"
+                        />
+                      ) : selectedAsset === 'WETH' ? (
+                        <Image 
+                          src="/weth-icon.png" 
+                          alt="WETH" 
+                          width={20} 
+                          height={20} 
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <CryptoIcon symbol={selectedAsset} size={20} />
+                      )}
                       <span>{selectedAsset}</span>
                     </div>
                   )}
@@ -117,7 +136,13 @@ export function RepayForm() {
               <SelectContent className="bg-[#252836] border-[#2a2d36] text-white">
                 <SelectItem value="USDC">
                   <div className="flex items-center gap-2">
-                    <CryptoIcon symbol="USDC" size={20} />
+                    <Image 
+                      src="/usdc-icon.webp" 
+                      alt="USDC" 
+                      width={20} 
+                      height={20} 
+                      className="rounded-full"
+                    />
                     <span>USDC - USD Coin</span>
                   </div>
                 </SelectItem>

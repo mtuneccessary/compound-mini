@@ -1,9 +1,7 @@
 import "dotenv/config"
 import { HardhatUserConfig } from "hardhat/config"
 
-import "./tasks/comet"
-
-const ETH_RPC_URL = process.env.ETH_RPC_URL || ""
+const ETH_RPC_URL = process.env.ETH_RPC_URL || "https://eth-mainnet.g.alchemy.com/v2/demo"
 const FORK_BLOCK = process.env.FORK_BLOCK ? Number(process.env.FORK_BLOCK) : undefined
 
 const config: HardhatUserConfig = {
@@ -26,10 +24,10 @@ const config: HardhatUserConfig = {
 		},
 		localhost: {
 			type: "http",
-			url: "http://127.0.0.1:18545",
+			url: "http://127.0.0.1:8545",
 			chainId: 31337,
 		},
 	},
 }
 
-export default config 
+export default config

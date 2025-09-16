@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils"
 import { ArrowUpRight } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { CryptoIcon } from "./crypto-icon"
+import Image from "next/image"
 import { useFeedback } from "@/lib/feedback-provider"
 import cometAbi from "@/lib/abis/comet.json"
 import erc20Abi from "@/lib/abis/erc20.json"
@@ -106,7 +107,25 @@ export function WithdrawForm() {
                 <SelectValue placeholder="Select asset">
                   {selectedAsset && (
                     <div className="flex items-center gap-2">
-                      <CryptoIcon symbol={selectedAsset} size={20} />
+                      {selectedAsset === 'USDC' ? (
+                        <Image 
+                          src="/usdc-icon.webp" 
+                          alt="USDC" 
+                          width={20} 
+                          height={20} 
+                          className="rounded-full"
+                        />
+                      ) : selectedAsset === 'WETH' ? (
+                        <Image 
+                          src="/weth-icon.png" 
+                          alt="WETH" 
+                          width={20} 
+                          height={20} 
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <CryptoIcon symbol={selectedAsset} size={20} />
+                      )}
                       <span>{selectedAsset}</span>
                     </div>
                   )}
@@ -116,7 +135,25 @@ export function WithdrawForm() {
                 {Object.keys(COLLATERALS).map((sym) => (
                   <SelectItem key={sym} value={sym}>
                     <div className="flex items-center gap-2">
-                      <CryptoIcon symbol={sym} size={20} />
+                      {sym === 'USDC' ? (
+                        <Image 
+                          src="/usdc-icon.webp" 
+                          alt="USDC" 
+                          width={20} 
+                          height={20} 
+                          className="rounded-full"
+                        />
+                      ) : sym === 'WETH' ? (
+                        <Image 
+                          src="/weth-icon.png" 
+                          alt="WETH" 
+                          width={20} 
+                          height={20} 
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <CryptoIcon symbol={sym} size={20} />
+                      )}
                       <span>{sym}</span>
                     </div>
                   </SelectItem>

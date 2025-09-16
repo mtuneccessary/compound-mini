@@ -5,7 +5,7 @@ import { hardhat } from "viem/chains"
 import cometAbi from "./abis/comet.json"
 import erc20Abi from "./abis/erc20.json"
 
-const rpcUrl = process.env.NEXT_PUBLIC_LOCAL_RPC_URL || "http://127.0.0.1:18545"
+const rpcUrl = process.env.NEXT_PUBLIC_LOCAL_RPC_URL || "http://127.0.0.1:8545"
 
 export const publicClient = createPublicClient({ chain: hardhat, transport: http(rpcUrl) })
 
@@ -16,6 +16,7 @@ export function getWalletClient() {
 
 export const COMET_ADDRESS = (process.env.NEXT_PUBLIC_COMET_ADDRESS || "0xc3d688B66703497DAA19211EEdff47f25384cdc3") as `0x${string}`
 export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48") as `0x${string}`
+export const WETH_ADDRESS = (process.env.NEXT_PUBLIC_WETH_ADDRESS || "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2") as `0x${string}`
 
 export async function getBaseBalances(account: `0x${string}`) {
 	const [supplied, borrowed] = await Promise.all([

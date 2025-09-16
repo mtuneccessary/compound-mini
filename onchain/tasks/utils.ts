@@ -3,7 +3,7 @@ import fs from "fs"
 import path from "path"
 
 export function getProvider() {
-	const url = process.env.LOCAL_RPC_URL || "http://127.0.0.1:18545"
+	const url = process.env.LOCAL_RPC_URL || "http://127.0.0.1:8545"
 	return new ethers.JsonRpcProvider(url)
 }
 
