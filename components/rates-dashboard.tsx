@@ -89,12 +89,12 @@ export function RatesDashboard() {
   if (!mounted) return null
 
   return (
-    <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+    <Card className="compound-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">Live USDC Rates</CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-text-tertiary">
               Real-time market rates
             </CardDescription>
           </div>
@@ -115,20 +115,20 @@ export function RatesDashboard() {
       
       <CardContent>
         {loading && !rates ? (
-          <div className="text-center py-6 text-gray-400">
+          <div className="text-center py-6 text-text-tertiary">
             <Loader2 className="mx-auto h-6 w-6 mb-2 animate-spin" />
             <p className="text-sm">Loading rates...</p>
           </div>
         ) : error ? (
-          <div className="text-center py-6 text-red-400">
+          <div className="text-center py-6 text-compound-error-400">
             <p className="text-sm mb-2">{error}</p>
-            <div className="text-xs text-gray-500 mb-2">
+            <div className="text-xs text-text-muted mb-2">
               RPC: {publicClient.transport.url}<br/>
               Contract: {COMET_ADDRESS}
             </div>
             <button 
               onClick={fetchRates}
-              className="text-xs text-blue-400 hover:text-blue-300"
+              className="text-xs text-compound-primary-400 hover:text-compound-primary-300"
             >
               Try again
             </button>
@@ -136,7 +136,7 @@ export function RatesDashboard() {
         ) : rates ? (
           <div className="space-y-4">
             {/* USDC Rates */}
-            <div className="bg-[#252836] p-4 rounded-lg">
+            <div className="bg-bg-tertiary p-4 rounded-lg">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Image 
@@ -148,37 +148,37 @@ export function RatesDashboard() {
                   />
                   <span className="font-medium">USDC Market</span>
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-text-tertiary">
                   {rates.utilization.toFixed(1)}% utilized
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-green-400 mb-1">
+                  <div className="text-lg font-semibold text-compound-success-400 mb-1">
                     {rates.supplyRate > 0.01 ? rates.supplyRate.toFixed(2) + '%' : rates.supplyRate.toFixed(4) + '%'}
                   </div>
-                  <div className="text-xs text-gray-400">Supply APY</div>
+                  <div className="text-xs text-text-tertiary">Supply APY</div>
                 </div>
                 
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-red-400 mb-1">
+                  <div className="text-lg font-semibold text-compound-error-400 mb-1">
                     {rates.borrowRate > 0.01 ? rates.borrowRate.toFixed(2) + '%' : rates.borrowRate.toFixed(4) + '%'}
                   </div>
-                  <div className="text-xs text-gray-400">Borrow APR</div>
+                  <div className="text-xs text-text-tertiary">Borrow APR</div>
                 </div>
               </div>
             </div>
 
             {/* Info */}
-            <div className="bg-[#252836] p-3 rounded-lg">
-              <div className="text-xs text-gray-400 text-center">
+            <div className="bg-bg-tertiary p-3 rounded-lg">
+              <div className="text-xs text-text-tertiary text-center">
                 Rates update when you refresh • Click refresh button above
               </div>
             </div>
           </div>
         ) : (
-          <div className="text-center py-6 text-gray-400">
+          <div className="text-center py-6 text-text-tertiary">
             <p className="text-sm">No rate data available</p>
           </div>
         )}

@@ -11,7 +11,9 @@ import { HealthFactorMonitor } from "./health-factor-monitor"
 import { MarketInsightsPanel } from "./market-insights-panel"
 import { PortfolioAnalytics } from "./portfolio-analytics"
 import { LendingMetricsCalculator } from "./lending-metrics-calculator"
+import { NetworkSwitcher } from "./network-switcher"
 import Image from "next/image"
+import { motion } from "framer-motion"
 
 export function Dashboard() {
 	const [mounted, setMounted] = useState(false)
@@ -75,35 +77,84 @@ export function Dashboard() {
 	if (!mounted) return null
 
 	return (
-		<div className="p-4 space-y-4 pb-24">
-			{/* Live Rates Dashboard */}
-			<RatesDashboard />
+		<motion.div 
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{ duration: 0.3 }}
+			className="p-4 space-y-4 pb-24"
+		>
+			{/* Network Switcher - Show network status and configuration */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.4, delay: 0.05 }}
+			>
+				<NetworkSwitcher />
+			</motion.div>
 			
-			{/* Market Insights Panel */}
-			<MarketInsightsPanel />
+			{/* Portfolio Analytics - User's current position (most important) */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.4, delay: 0.1 }}
+			>
+				<PortfolioAnalytics />
+			</motion.div>
 			
-			{/* Health Factor Monitor */}
-			<HealthFactorMonitor />
+			{/* Health Factor Monitor - Critical safety metric */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.4, delay: 0.2 }}
+			>
+				<HealthFactorMonitor />
+			</motion.div>
 			
-			{/* Portfolio Analytics */}
-			<PortfolioAnalytics />
+			{/* Live Rates Dashboard - Current market rates */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.4, delay: 0.3 }}
+			>
+				<RatesDashboard />
+			</motion.div>
+			
+			{/* Market Insights Panel - Market context */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.4, delay: 0.4 }}
+			>
+				<MarketInsightsPanel />
+			</motion.div>
 
-			{/* Lending Metrics Calculator */}
-			<LendingMetricsCalculator />
+			{/* Lending Metrics Calculator - Advanced calculations */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.4, delay: 0.5 }}
+			>
+				<LendingMetricsCalculator />
+			</motion.div>
 
-			<Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.4, delay: 0.6 }}
+			>
+				<Card className="compound-card">
 				<CardHeader className="pb-2">
 					<CardTitle className="text-xl flex justify-between">
 						<span>Dashboard</span>
 					</CardTitle>
-					<CardDescription className="text-gray-400">
+					<CardDescription className="text-text-tertiary">
 						{isConnected ? "Your on-chain positions (live from Comet v3)" : "Connect your wallet to view positions and use the actions below."}
 					</CardDescription>
 				</CardHeader>
 				{isConnected && (
 					<CardContent>
 						<div className="grid grid-cols-2 gap-4 mb-4">
-							<div className="bg-[#252836] p-3 rounded-lg">
+							<div className="bg-bg-tertiary p-3 rounded-lg">
 								<div className="flex items-center gap-2 mb-1">
 									<Image 
 										src="/weth-icon.png" 
@@ -112,11 +163,11 @@ export function Dashboard() {
 										height={16} 
 										className="rounded-full"
 									/>
-									<div className="text-xs text-gray-400">WETH Wallet</div>
+									<div className="text-xs text-text-tertiary">WETH Wallet</div>
 								</div>
 								<div className="text-lg font-semibold">{Number(wethWalletBalance) / 1e18}</div>
 							</div>
-							<div className="bg-[#252836] p-3 rounded-lg">
+							<div className="bg-bg-tertiary p-3 rounded-lg">
 								<div className="flex items-center gap-2 mb-1">
 									<Image 
 										src="/usdc-icon.webp" 
@@ -125,14 +176,14 @@ export function Dashboard() {
 										height={16} 
 										className="rounded-full"
 									/>
-									<div className="text-xs text-gray-400">USDC Wallet</div>
+									<div className="text-xs text-text-tertiary">USDC Wallet</div>
 								</div>
 								<div className="text-lg font-semibold">{Number(usdcWalletBalance) / 1e6}</div>
 							</div>
 						</div>
 						
 						<div className="grid grid-cols-2 gap-4 mb-4">
-							<div className="bg-[#252836] p-3 rounded-lg">
+							<div className="bg-bg-tertiary p-3 rounded-lg">
 								<div className="flex items-center gap-2 mb-1">
 									<Image 
 										src="/weth-icon.png" 
@@ -141,11 +192,11 @@ export function Dashboard() {
 										height={16} 
 										className="rounded-full"
 									/>
-									<div className="text-xs text-gray-400">WETH Collateral</div>
+									<div className="text-xs text-text-tertiary">WETH Collateral</div>
 								</div>
 								<div className="text-lg font-semibold">{Number(collateralWeth) / 1e18}</div>
 							</div>
-							<div className="bg-[#252836] p-3 rounded-lg">
+							<div className="bg-bg-tertiary p-3 rounded-lg">
 								<div className="flex items-center gap-2 mb-1">
 									<Image 
 										src="/usdc-icon.webp" 
@@ -154,14 +205,14 @@ export function Dashboard() {
 										height={16} 
 										className="rounded-full"
 									/>
-									<div className="text-xs text-gray-400">USDC Borrowed</div>
+									<div className="text-xs text-text-tertiary">USDC Borrowed</div>
 								</div>
 								<div className="text-lg font-semibold">{Number(baseBorrowed) / 1e6}</div>
 							</div>
 						</div>
 						
 						<div className="grid grid-cols-1 gap-4 mb-4">
-							<div className="bg-[#252836] p-3 rounded-lg">
+							<div className="bg-bg-tertiary p-3 rounded-lg">
 								<div className="flex items-center gap-2 mb-1">
 									<Image 
 										src="/usdc-icon.webp" 
@@ -170,16 +221,16 @@ export function Dashboard() {
 										height={16} 
 										className="rounded-full"
 									/>
-									<div className="text-xs text-gray-400">USDC Supplied</div>
+									<div className="text-xs text-text-tertiary">USDC Supplied</div>
 								</div>
 								<div className="text-lg font-semibold">{Number(baseSupplied) / 1e6}</div>
 							</div>
 						</div>
 						
 						{(baseSupplied === BigInt(0) && baseBorrowed === BigInt(0) && collateralWeth === BigInt(0)) && (
-							<div className="bg-blue-900/20 border border-blue-700/50 p-3 rounded-lg">
-								<div className="text-sm text-blue-300 mb-2">🚀 Ready to start DeFi!</div>
-								<div className="text-xs text-gray-400">
+							<div className="bg-compound-primary-900/10 border border-compound-primary-700/30 p-3 rounded-lg">
+								<div className="text-sm text-compound-primary-400 mb-2">🚀 Ready to start DeFi!</div>
+								<div className="text-xs text-text-tertiary">
 									You have {Number(wethWalletBalance) / 1e18} WETH available. 
 									Use the <strong>Supply</strong> page to deposit WETH as collateral, 
 									then <strong>Borrow</strong> USDC against your collateral.
@@ -188,9 +239,9 @@ export function Dashboard() {
 						)}
 						
 						{(baseSupplied > BigInt(0) || baseBorrowed > BigInt(0) || collateralWeth > BigInt(0)) && (
-							<div className="bg-green-900/20 border border-green-700/50 p-3 rounded-lg">
-								<div className="text-sm text-green-300 mb-2">✅ Active DeFi Position</div>
-								<div className="text-xs text-gray-400">
+							<div className="bg-compound-success-900/10 border border-compound-success-700/30 p-3 rounded-lg">
+								<div className="text-sm text-compound-success-400 mb-2">✅ Active DeFi Position</div>
+								<div className="text-xs text-text-tertiary">
 									You have an active position! Use <strong>Supply</strong> to add more collateral, 
 									<strong>Borrow</strong> to increase your loan, <strong>Repay</strong> to reduce debt, 
 									or <strong>Withdraw</strong> to remove collateral.
@@ -198,12 +249,13 @@ export function Dashboard() {
 							</div>
 						)}
 						
-						<div className="text-xs text-gray-500 mt-2">
+						<div className="text-xs text-text-muted mt-2">
 							Contract: {COMET_ADDRESS}
 						</div>
 					</CardContent>
 				)}
 			</Card>
-		</div>
+			</motion.div>
+		</motion.div>
 	)
 }

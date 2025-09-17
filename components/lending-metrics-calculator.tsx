@@ -242,27 +242,27 @@ export function LendingMetricsCalculator() {
     if (riskScore <= 3) return 'text-red-600 dark:text-red-400'
     if (riskScore <= 5) return 'text-yellow-600 dark:text-yellow-400'
     if (riskScore <= 7) return 'text-orange-600 dark:text-orange-400'
-    return 'text-green-600 dark:text-green-400'
+    return 'text-compound-success-400'
   }
 
   const getHealthFactorColor = (hf: number) => {
     if (hf < 1.2) return 'text-red-600 dark:text-red-400'
     if (hf < 1.5) return 'text-yellow-600 dark:text-yellow-400'
     if (hf < 2.0) return 'text-orange-600 dark:text-orange-400'
-    return 'text-green-600 dark:text-green-400'
+    return 'text-compound-success-400'
   }
 
   if (loading) {
     return (
-      <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-        <CardHeader className="pb-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white rounded-t-lg">
+      <Card className="compound-card">
+        <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
           <CardTitle className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-full">
+            <div className="p-2 bg-bg-tertiary rounded-full">
               <Calculator className="h-5 w-5" />
             </div>
             <span className="text-xl font-bold">Lending Metrics Calculator</span>
           </CardTitle>
-          <p className="text-green-100 text-sm opacity-90">
+          <p className="text-compound-success-100 text-sm opacity-90">
             Advanced position analysis and risk assessment
           </p>
         </CardHeader>
@@ -278,10 +278,10 @@ export function LendingMetricsCalculator() {
 
   if (error) {
     return (
-      <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-        <CardHeader className="pb-4 bg-gradient-to-r from-red-600 via-red-600 to-red-600 text-white rounded-t-lg">
+      <Card className="compound-card">
+        <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
           <CardTitle className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-full">
+            <div className="p-2 bg-bg-tertiary rounded-full">
               <Calculator className="h-5 w-5" />
             </div>
             <span className="text-xl font-bold">Lending Metrics Calculator</span>
@@ -292,7 +292,7 @@ export function LendingMetricsCalculator() {
             <div className="p-4 bg-red-100 dark:bg-red-800/50 rounded-full w-fit mx-auto mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+            <h3 className="text-xl font-semibold text-text-primary mb-2">
               Error Loading Metrics
             </h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">{error}</p>
@@ -307,10 +307,10 @@ export function LendingMetricsCalculator() {
 
   if (!metrics) {
     return (
-      <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-        <CardHeader className="pb-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white rounded-t-lg">
+      <Card className="compound-card">
+        <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
           <CardTitle className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-full">
+            <div className="p-2 bg-bg-tertiary rounded-full">
               <Calculator className="h-5 w-5" />
             </div>
             <span className="text-xl font-bold">Lending Metrics Calculator</span>
@@ -332,11 +332,11 @@ export function LendingMetricsCalculator() {
   )
 
   return (
-    <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-      <CardHeader className="pb-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white rounded-t-lg">
+    <Card className="compound-card">
+      <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-full">
+            <div className="p-2 bg-bg-tertiary rounded-full">
               <Calculator className="h-5 w-5" />
             </div>
             <span className="text-xl font-bold">Lending Metrics Calculator</span>
@@ -350,14 +350,14 @@ export function LendingMetricsCalculator() {
                 ? 'bg-yellow-500/20 text-yellow-100 border-yellow-400/30'
                 : metrics.riskScore <= 7
                 ? 'bg-orange-500/20 text-orange-100 border-orange-400/30'
-                : 'bg-green-500/20 text-green-100 border-green-400/30'
+                : 'bg-compound-success-500/20 text-compound-success-100 border-green-400/30'
             }`}
           >
             <Target className="h-3 w-3 mr-1" />
             Risk Score: {metrics.riskScore}/10
           </Badge>
         </CardTitle>
-        <p className="text-green-100 text-sm opacity-90">
+        <p className="text-compound-success-100 text-sm opacity-90">
           Advanced position analysis and risk assessment
         </p>
       </CardHeader>
@@ -388,12 +388,12 @@ export function LendingMetricsCalculator() {
                     <DollarSign className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Collateral Position</h3>
+                    <h3 className="text-lg font-semibold text-text-primary">Collateral Position</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300">WETH deposited as collateral</p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-3xl font-bold text-text-primary">
                     ${metrics.collateralAmount.toFixed(4)}
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -408,12 +408,12 @@ export function LendingMetricsCalculator() {
                     <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Borrowed Amount</h3>
+                    <h3 className="text-lg font-semibold text-text-primary">Borrowed Amount</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300">USDC borrowed from protocol</p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-3xl font-bold text-text-primary">
                     ${metrics.borrowAmount.toFixed(2)}
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -427,11 +427,11 @@ export function LendingMetricsCalculator() {
             <div className="bg-gradient-to-r from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 p-6 rounded-xl border border-slate-200 dark:border-slate-600">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
-                    <Zap className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="p-2 bg-compound-success-900/20 rounded-full">
+                    <Zap className="h-5 w-5 text-compound-success-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Health Factor</h3>
+                    <h3 className="text-lg font-semibold text-text-primary">Health Factor</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300">Position safety score</p>
                   </div>
                 </div>
@@ -457,7 +457,7 @@ export function LendingMetricsCalculator() {
                     <span className="text-slate-600 dark:text-slate-300">2.0 (Warning)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-compound-success-500 rounded-full"></div>
                     <span className="text-slate-600 dark:text-slate-300">3.0 (Safe)</span>
                   </div>
                 </div>
@@ -467,9 +467,9 @@ export function LendingMetricsCalculator() {
             {/* Market Rates */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-xl border border-green-200 dark:border-green-700 text-center">
-                <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                <TrendingUp className="h-8 w-8 text-compound-success-400 mx-auto mb-2" />
                 <p className="text-sm text-slate-600 dark:text-slate-300">Supply APY</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-text-primary">
                   {(metrics.supplyAPY * 100).toFixed(2)}%
                 </p>
               </div>
@@ -477,7 +477,7 @@ export function LendingMetricsCalculator() {
               <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-4 rounded-xl border border-red-200 dark:border-red-700 text-center">
                 <TrendingDown className="h-8 w-8 text-red-600 dark:text-red-400 mx-auto mb-2" />
                 <p className="text-sm text-slate-600 dark:text-slate-300">Borrow APY</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-text-primary">
                   {(metrics.borrowAPY * 100).toFixed(2)}%
                 </p>
               </div>
@@ -485,7 +485,7 @@ export function LendingMetricsCalculator() {
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700 text-center">
                 <PieChart className="h-8 w-8 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
                 <p className="text-sm text-slate-600 dark:text-slate-300">Utilization</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-text-primary">
                   {(metrics.utilizationRate * 100).toFixed(1)}%
                 </p>
               </div>
@@ -533,7 +533,7 @@ export function LendingMetricsCalculator() {
 
               {/* Projected Results */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Projected Metrics</h3>
+                <h3 className="text-lg font-semibold text-text-primary">Projected Metrics</h3>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
@@ -545,7 +545,7 @@ export function LendingMetricsCalculator() {
 
                   <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                     <span className="text-sm font-medium">Liquidation Price</span>
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">
+                    <span className="text-lg font-bold text-text-primary">
                       ${projectedMetrics.liquidationPrice.toFixed(2)}
                     </span>
                   </div>
@@ -554,7 +554,7 @@ export function LendingMetricsCalculator() {
                     <span className="text-sm font-medium">Net Yield</span>
                     <span className={`text-lg font-bold ${
                       projectedMetrics.netYield >= 0
-                        ? 'text-green-600 dark:text-green-400'
+                        ? 'text-compound-success-400'
                         : 'text-red-600 dark:text-red-400'
                     }`}>
                       ${projectedMetrics.netYield.toFixed(2)}/year
@@ -576,30 +576,30 @@ export function LendingMetricsCalculator() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl border border-green-200 dark:border-green-700">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-green-100 dark:bg-green-800/50 rounded-full">
-                    <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <div className="p-3 bg-compound-success-900/20 rounded-full">
+                    <Target className="h-6 w-6 text-compound-success-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Optimal Position</h3>
+                    <h3 className="text-lg font-semibold text-text-primary">Optimal Position</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300">Recommended collateral ratio</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Optimal Collateral</span>
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">
+                    <span className="text-lg font-bold text-text-primary">
                       {metrics.optimalCollateral.toFixed(4)} WETH
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Recommended Borrow</span>
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">
+                    <span className="text-lg font-bold text-text-primary">
                       ${metrics.recommendedBorrow.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Max Safe Borrow</span>
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">
+                    <span className="text-lg font-bold text-text-primary">
                       ${metrics.maxSafeBorrow.toFixed(2)}
                     </span>
                   </div>
@@ -612,7 +612,7 @@ export function LendingMetricsCalculator() {
                     <Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Yield Analysis</h3>
+                    <h3 className="text-lg font-semibold text-text-primary">Yield Analysis</h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300">Projected annual returns</p>
                   </div>
                 </div>
@@ -625,7 +625,7 @@ export function LendingMetricsCalculator() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Collateral Yield</span>
-                    <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    <span className="text-lg font-bold text-compound-success-400">
                       +${((metrics.collateralAmount * wethPrice) * metrics.supplyAPY * 0.1).toFixed(2)}/year
                     </span>
                   </div>
@@ -633,7 +633,7 @@ export function LendingMetricsCalculator() {
                     <span className="text-sm font-semibold">Net Annual Yield</span>
                     <span className={`text-xl font-bold ${
                       metrics.netYield >= 0
-                        ? 'text-green-600 dark:text-green-400'
+                        ? 'text-compound-success-400'
                         : 'text-red-600 dark:text-red-400'
                     }`}>
                       ${metrics.netYield.toFixed(2)}/year
@@ -644,25 +644,25 @@ export function LendingMetricsCalculator() {
             </div>
 
             <div className="bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800 dark:to-slate-700 p-6 rounded-xl border border-slate-200 dark:border-slate-600">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
                 Risk Assessment
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-slate-100 dark:bg-slate-600 rounded-lg">
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                  <p className="text-2xl font-bold text-text-primary mb-1">
                     {metrics.healthFactor < 1.5 ? 'High' : metrics.healthFactor < 2.0 ? 'Medium' : 'Low'}
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-300">Liquidation Risk</p>
                 </div>
                 <div className="text-center p-4 bg-slate-100 dark:bg-slate-600 rounded-lg">
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                  <p className="text-2xl font-bold text-text-primary mb-1">
                     {(metrics.utilizationRate * 100).toFixed(1)}%
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-300">Protocol Utilization</p>
                 </div>
                 <div className="text-center p-4 bg-slate-100 dark:bg-slate-600 rounded-lg">
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                  <p className="text-2xl font-bold text-text-primary mb-1">
                     {metrics.riskScore}/10
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-300">Position Score</p>

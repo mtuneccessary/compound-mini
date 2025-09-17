@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+import { compoundTheme } from "./lib/compound-theme"
 
 const config = {
   darkMode: ["class"],
@@ -20,7 +21,43 @@ const config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
+        // Compound Theme Colors
+        compound: {
+          primary: compoundTheme.primary,
+          secondary: compoundTheme.secondary,
+          accent: compoundTheme.accent,
+          success: compoundTheme.success,
+          warning: compoundTheme.warning,
+          error: compoundTheme.error,
+          neutral: compoundTheme.neutral,
+        },
+        // Semantic Colors
+        supply: compoundTheme.primary[500],
+        borrow: compoundTheme.warning[500],
+        withdraw: compoundTheme.secondary[500],
+        repay: compoundTheme.error[500],
+        // Background Colors
+        bg: {
+          primary: compoundTheme.background.primary,
+          secondary: compoundTheme.background.secondary,
+          tertiary: compoundTheme.background.tertiary,
+          quaternary: compoundTheme.background.quaternary,
+        },
+        // Text Colors
+        text: {
+          primary: compoundTheme.text.primary,
+          secondary: compoundTheme.text.secondary,
+          tertiary: compoundTheme.text.tertiary,
+          muted: compoundTheme.text.muted,
+        },
+        // Border Colors
+        border: {
+          primary: compoundTheme.border.primary,
+          secondary: compoundTheme.border.secondary,
+          accent: compoundTheme.border.accent,
+          focus: compoundTheme.border.focus,
+        },
+        // Legacy shadcn colors (keeping for compatibility)
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",

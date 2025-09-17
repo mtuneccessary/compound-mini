@@ -203,21 +203,21 @@ export function PortfolioAnalytics() {
 
   if (loading) {
     return (
-      <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-        <CardHeader className="pb-4 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-t-lg">
+      <Card className="compound-card">
+        <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-full">
+              <div className="p-2 bg-bg-tertiary rounded-full">
                 <PieChart className="h-5 w-5" />
               </div>
               <span className="text-xl font-bold">Portfolio Analytics</span>
             </div>
-            <Badge className="bg-white/10 text-white border-white/20 animate-pulse">
-              <div className="w-4 h-4 bg-white/50 rounded-full animate-pulse" />
+            <Badge className="bg-bg-tertiary text-text-primary border-border-primary animate-pulse">
+              <div className="w-4 h-4 bg-compound-primary-400 rounded-full animate-pulse" />
               <span className="ml-1">Loading</span>
             </Badge>
           </CardTitle>
-          <p className="text-blue-100 text-sm opacity-90">
+          <p className="text-compound-primary-100 text-sm opacity-90">
             Real-time portfolio insights and risk monitoring
           </p>
         </CardHeader>
@@ -226,8 +226,8 @@ export function PortfolioAnalytics() {
             <div className="bg-gradient-to-r from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 p-6 rounded-xl border border-slate-200 dark:border-slate-600">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full animate-pulse">
-                    <div className="w-5 h-5 bg-green-300 dark:bg-green-700 rounded" />
+                  <div className="p-2 bg-compound-success-100 dark:bg-compound-success-900/20 rounded-full animate-pulse">
+                    <div className="w-5 h-5 bg-compound-success-300 dark:bg-compound-success-700 rounded" />
                   </div>
                   <div className="space-y-2">
                     <div className="h-4 bg-slate-300 dark:bg-slate-600 rounded w-24 animate-pulse" />
@@ -244,10 +244,10 @@ export function PortfolioAnalytics() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl border border-green-200 dark:border-green-700 animate-pulse">
-                <div className="h-20 bg-green-100 dark:bg-green-800/30 rounded" />
+                <div className="h-20 bg-compound-success-900/20 rounded" />
               </div>
               <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-6 rounded-xl border border-red-200 dark:border-red-700 animate-pulse">
-                <div className="h-20 bg-red-100 dark:bg-red-800/30 rounded" />
+                <div className="h-20 bg-compound-error-100 dark:bg-compound-error-800/20 rounded" />
               </div>
             </div>
           </div>
@@ -258,21 +258,21 @@ export function PortfolioAnalytics() {
 
   if (error) {
     return (
-      <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-        <CardHeader className="pb-4 bg-gradient-to-r from-red-600 via-red-600 to-red-600 text-white rounded-t-lg">
+      <Card className="compound-card">
+        <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-full">
+              <div className="p-2 bg-bg-tertiary rounded-full">
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <span className="text-xl font-bold">Portfolio Analytics</span>
             </div>
-            <Badge className="bg-red-500/20 text-red-100 border-red-400/30">
+            <Badge className="bg-red-500/20 text-compound-error-100 border-red-400/30">
               <AlertTriangle className="h-4 w-4" />
               <span className="ml-1">Error</span>
             </Badge>
           </CardTitle>
-          <p className="text-red-100 text-sm opacity-90">
+          <p className="text-compound-error-100 text-sm opacity-90">
             Unable to load portfolio data
           </p>
         </CardHeader>
@@ -281,7 +281,7 @@ export function PortfolioAnalytics() {
             <div className="p-4 bg-red-100 dark:bg-red-800/50 rounded-full w-fit mx-auto mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+            <h3 className="text-xl font-semibold text-text-primary mb-2">
               Error Loading Portfolio Data
             </h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">
@@ -289,7 +289,7 @@ export function PortfolioAnalytics() {
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-compound-error-600 hover:bg-compound-error-700 text-white rounded-lg font-medium transition-colors"
             >
               Try Again
             </button>
@@ -301,21 +301,21 @@ export function PortfolioAnalytics() {
 
   if (!portfolioData) {
     return (
-      <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-        <CardHeader className="pb-4 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-t-lg">
+      <Card className="compound-card">
+        <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-full">
+              <div className="p-2 bg-bg-tertiary rounded-full">
                 <PieChart className="h-5 w-5" />
               </div>
               <span className="text-xl font-bold">Portfolio Analytics</span>
             </div>
-            <Badge className="bg-white/10 text-white border-white/20">
+            <Badge className="bg-bg-tertiary text-text-primary border-border-primary">
               <PieChart className="h-4 w-4" />
               <span className="ml-1">Empty</span>
             </Badge>
           </CardTitle>
-          <p className="text-blue-100 text-sm opacity-90">
+          <p className="text-compound-primary-100 text-sm opacity-90">
             Real-time portfolio insights and risk monitoring
           </p>
         </CardHeader>
@@ -324,7 +324,7 @@ export function PortfolioAnalytics() {
             <div className="p-4 bg-slate-100 dark:bg-slate-600 rounded-full w-fit mx-auto mb-4">
               <PieChart className="h-8 w-8 text-slate-600 dark:text-slate-300" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+            <h3 className="text-xl font-semibold text-text-primary mb-2">
               No Portfolio Data Available
             </h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">
@@ -357,10 +357,10 @@ export function PortfolioAnalytics() {
 
   return (
     <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-      <CardHeader className="pb-4 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-t-lg">
+      <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-full">
+            <div className="p-2 bg-bg-tertiary rounded-full">
               <PieChart className="h-5 w-5" />
             </div>
             <span className="text-xl font-bold">Portfolio Analytics</span>
@@ -369,17 +369,17 @@ export function PortfolioAnalytics() {
             variant={getRiskBadgeVariant(portfolioData.riskLevel)}
             className={`text-xs px-3 py-1 font-semibold ${
               portfolioData.riskLevel === 'safe'
-                ? 'bg-green-500/20 text-green-100 border-green-400/30'
+                ? 'bg-compound-success-900/20 text-compound-success-100 border-compound-success-700/30'
                 : portfolioData.riskLevel === 'warning'
                 ? 'bg-yellow-500/20 text-yellow-100 border-yellow-400/30'
-                : 'bg-red-500/20 text-red-100 border-red-400/30'
+                : 'bg-red-500/20 text-compound-error-100 border-red-400/30'
             }`}
           >
             {getRiskIcon(portfolioData.riskLevel)}
             <span className="ml-1 capitalize">{portfolioData.riskLevel}</span>
           </Badge>
         </CardTitle>
-        <p className="text-blue-100 text-sm opacity-90">
+        <p className="text-compound-primary-100 text-sm opacity-90">
           Real-time portfolio insights and risk monitoring
         </p>
       </CardHeader>
@@ -389,16 +389,16 @@ export function PortfolioAnalytics() {
         <div className="bg-gradient-to-r from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 p-6 rounded-xl border border-slate-200 dark:border-slate-600">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
-                <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <div className="p-2 bg-compound-success-100 dark:bg-compound-success-900/20 rounded-full">
+                <Shield className="h-5 w-5 text-compound-success-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Health Factor</h3>
+                <h3 className="text-lg font-semibold text-text-primary">Health Factor</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300">Portfolio safety score</p>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-3xl font-bold text-slate-900 dark:text-white">
+              <span className="text-3xl font-bold text-text-primary">
                 {portfolioData.healthFactor === Infinity ? '∞' : portfolioData.healthFactor.toFixed(2)}
               </span>
               <p className="text-sm text-slate-600 dark:text-slate-300">Score</p>
@@ -419,7 +419,7 @@ export function PortfolioAnalytics() {
                 <span className="text-slate-600 dark:text-slate-300">2.0 (Warning)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-compound-success-500 rounded-full"></div>
                 <span className="text-slate-600 dark:text-slate-300">3.0 (Safe)</span>
               </div>
             </div>
@@ -430,16 +430,16 @@ export function PortfolioAnalytics() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl border border-green-200 dark:border-green-700">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-green-100 dark:bg-green-800/50 rounded-full">
-                <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="p-3 bg-compound-success-900/20 rounded-full">
+                <DollarSign className="h-6 w-6 text-compound-success-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Total Collateral</h3>
+                <h3 className="text-lg font-semibold text-text-primary">Total Collateral</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300">WETH backing your position</p>
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">
+              <p className="text-3xl font-bold text-text-primary">
                 ${portfolioData.totalCollateralValue.toFixed(2)}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
@@ -456,12 +456,12 @@ export function PortfolioAnalytics() {
                 <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Total Borrowed</h3>
+                <h3 className="text-lg font-semibold text-text-primary">Total Borrowed</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300">USDC debt to repay</p>
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">
+              <p className="text-3xl font-bold text-text-primary">
                 ${portfolioData.totalBorrowedValue.toFixed(2)}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -477,24 +477,24 @@ export function PortfolioAnalytics() {
             <div className="flex items-center gap-3">
               <div className={`p-3 rounded-full ${
                 portfolioData.netPositionValue >= 0
-                  ? 'bg-green-100 dark:bg-green-800/50'
+                  ? 'bg-compound-success-900/20'
                   : 'bg-red-100 dark:bg-red-800/50'
               }`}>
                 {portfolioData.netPositionValue >= 0 ? (
-                  <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <TrendingUp className="h-6 w-6 text-compound-success-400" />
                 ) : (
                   <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
                 )}
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Net Position Value</h3>
+                <h3 className="text-lg font-semibold text-text-primary">Net Position Value</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300">Equity in your position</p>
               </div>
             </div>
             <div className="text-right">
               <p className={`text-3xl font-bold ${
                 portfolioData.netPositionValue >= 0
-                  ? 'text-green-600 dark:text-green-400'
+                  ? 'text-compound-success-400'
                   : 'text-red-600 dark:text-red-400'
               }`}>
                 ${Math.abs(portfolioData.netPositionValue).toFixed(2)}
@@ -522,7 +522,7 @@ export function PortfolioAnalytics() {
 
         {/* Risk Metrics - Enhanced */}
         <div className="space-y-4">
-          <h4 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+          <h4 className="text-lg font-semibold text-text-primary flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             Risk Metrics
           </h4>
@@ -533,12 +533,12 @@ export function PortfolioAnalytics() {
                   <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Liquidation Price</h3>
+                  <h3 className="text-lg font-semibold text-text-primary">Liquidation Price</h3>
                   <p className="text-sm text-slate-600 dark:text-slate-300">Danger zone threshold</p>
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-text-primary">
                   ${portfolioData.liquidationPrice.toFixed(2)}
                 </p>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -553,12 +553,12 @@ export function PortfolioAnalytics() {
                   <PieChart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Collateral Ratio</h3>
+                  <h3 className="text-lg font-semibold text-text-primary">Collateral Ratio</h3>
                   <p className="text-sm text-slate-600 dark:text-slate-300">Safety multiplier</p>
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-text-primary">
                   {portfolioData.collateralRatio.toFixed(2)}x
                 </p>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -577,12 +577,12 @@ export function PortfolioAnalytics() {
                 <DollarSign className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Borrowing Capacity</h3>
+                <h3 className="text-lg font-semibold text-text-primary">Borrowing Capacity</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300">Available to borrow</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xl font-bold text-slate-900 dark:text-white">
+              <p className="text-xl font-bold text-text-primary">
                 ${portfolioData.currentBorrowCapacity.toFixed(2)}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-300">available</p>
@@ -608,16 +608,16 @@ export function PortfolioAnalytics() {
                 <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">USDC Supply Position</h3>
+                <h3 className="text-lg font-semibold text-text-primary">USDC Supply Position</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300">Earning yield on supplied assets</p>
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-3xl font-bold text-slate-900 dark:text-white">
+              <p className="text-3xl font-bold text-text-primary">
                 ${portfolioData.usdcSuppliedAmount.toFixed(2)}
               </p>
               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-compound-success-500 rounded-full animate-pulse"></div>
                 <span>Earning supply interest</span>
               </div>
             </div>

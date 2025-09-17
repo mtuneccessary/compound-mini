@@ -1,3 +1,193 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Compound Finance Theme - CSS Custom Properties */
+:root {
+  /* Compound Primary Colors - Cool Blue (Muted) */
+  --compound-primary-50: #f8fafc;
+  --compound-primary-100: #f1f5f9;
+  --compound-primary-200: #e2e8f0;
+  --compound-primary-300: #cbd5e1;
+  --compound-primary-400: #94a3b8;
+  --compound-primary-500: #64748b;
+  --compound-primary-600: #475569;
+  --compound-primary-700: #334155;
+  --compound-primary-800: #1e293b;
+  --compound-primary-900: #0f172a;
+  --compound-primary-950: #020617;
+
+  /* Compound Secondary Colors - Cool Gray (Muted) */
+  --compound-secondary-50: #fafafa;
+  --compound-secondary-100: #f4f4f5;
+  --compound-secondary-200: #e4e4e7;
+  --compound-secondary-300: #d4d4d8;
+  --compound-secondary-400: #a1a1aa;
+  --compound-secondary-500: #71717a;
+  --compound-secondary-600: #52525b;
+  --compound-secondary-700: #3f3f46;
+  --compound-secondary-800: #27272a;
+  --compound-secondary-900: #18181b;
+  --compound-secondary-950: #09090b;
+
+  /* Compound Accent Colors - Cool Purple (Muted) */
+  --compound-accent-50: #fafafa;
+  --compound-accent-100: #f4f4f5;
+  --compound-accent-200: #e4e4e7;
+  --compound-accent-300: #d4d4d8;
+  --compound-accent-400: #a1a1aa;
+  --compound-accent-500: #71717a;
+  --compound-accent-600: #52525b;
+  --compound-accent-700: #3f3f46;
+  --compound-accent-800: #27272a;
+  --compound-accent-900: #18181b;
+  --compound-accent-950: #09090b;
+
+  /* Status Colors - Muted */
+  --compound-success: #10b981;
+  --compound-warning: #d97706;
+  --compound-error: #dc2626;
+
+  /* Background Colors */
+  --compound-bg-primary: #0d0f14;
+  --compound-bg-secondary: #1a1d26;
+  --compound-bg-tertiary: #252836;
+  --compound-bg-quaternary: #2a2d36;
+
+  /* Text Colors */
+  --compound-text-primary: #ffffff;
+  --compound-text-secondary: #e2e8f0;
+  --compound-text-tertiary: #94a3b8;
+  --compound-text-muted: #64748b;
+
+  /* Border Colors */
+  --compound-border-primary: #2a2d36;
+  --compound-border-secondary: #334155;
+  --compound-border-accent: #475569;
+  --compound-border-focus: #64748b;
+
+  /* Semantic Action Colors */
+  --compound-supply: var(--compound-primary-500);
+  --compound-borrow: var(--compound-warning);
+  --compound-withdraw: var(--compound-secondary-500);
+  --compound-repay: var(--compound-error);
+}
+
+/* Base styles with Compound theme */
+@layer base {
+  * {
+    border-color: var(--compound-border-primary);
+  }
+  
+  body {
+    background-color: var(--compound-bg-primary);
+    color: var(--compound-text-primary);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Compound-themed scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--compound-bg-secondary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--compound-border-secondary);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--compound-border-accent);
+  }
+}
+
+/* Compound-themed components */
+@layer components {
+  .compound-card {
+    background-color: var(--compound-bg-secondary);
+    border-color: var(--compound-border-primary);
+    color: var(--compound-text-primary);
+  }
+
+  .compound-button-primary {
+    background-color: var(--compound-primary-500);
+    color: white;
+  }
+
+  .compound-button-primary:hover {
+    background-color: var(--compound-primary-600);
+  }
+
+  .compound-button-secondary {
+    background-color: var(--compound-secondary-500);
+    color: white;
+  }
+
+  .compound-button-secondary:hover {
+    background-color: var(--compound-secondary-600);
+  }
+
+  .compound-button-supply {
+    background-color: var(--compound-supply);
+    color: white;
+  }
+
+  .compound-button-supply:hover {
+    background-color: var(--compound-primary-600);
+  }
+
+  .compound-button-borrow {
+    background-color: var(--compound-borrow);
+    color: white;
+  }
+
+  .compound-button-borrow:hover {
+    background-color: var(--compound-warning-600);
+  }
+
+  .compound-button-withdraw {
+    background-color: var(--compound-withdraw);
+    color: white;
+  }
+
+  .compound-button-withdraw:hover {
+    background-color: var(--compound-secondary-600);
+  }
+
+  .compound-button-repay {
+    background-color: var(--compound-repay);
+    color: white;
+  }
+
+  .compound-button-repay:hover {
+    background-color: var(--compound-error-600);
+  }
+
+  .compound-gradient-primary {
+    background: linear-gradient(135deg, var(--compound-primary-600) 0%, var(--compound-primary-500) 100%);
+  }
+
+  .compound-gradient-secondary {
+    background: linear-gradient(135deg, var(--compound-secondary-600) 0%, var(--compound-secondary-500) 100%);
+  }
+
+  .compound-gradient-accent {
+    background: linear-gradient(135deg, var(--compound-accent-600) 0%, var(--compound-accent-500) 100%);
+  }
+
+  .compound-shadow-colored {
+    box-shadow: 0 4px 14px 0 rgba(34, 197, 94, 0.25);
+  }
+
+  .compound-shadow-colored-blue {
+    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.25);
+  }
+
+  .compound-shadow-colored-purple {
+    box-shadow: 0 4px 14px 0 rgba(168, 85, 247, 0.25);
+  }
+}

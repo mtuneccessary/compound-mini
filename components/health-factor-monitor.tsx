@@ -145,17 +145,17 @@ export function HealthFactorMonitor() {
 
   const getRiskColor = (risk: 'safe' | 'warning' | 'danger') => {
     switch (risk) {
-      case 'safe': return 'text-green-400'
-      case 'warning': return 'text-yellow-400'
-      case 'danger': return 'text-red-400'
+      case 'safe': return 'text-compound-success-400'
+      case 'warning': return 'text-compound-warning-400'
+      case 'danger': return 'text-compound-error-400'
     }
   }
 
   const getRiskBg = (risk: 'safe' | 'warning' | 'danger') => {
     switch (risk) {
-      case 'safe': return 'bg-green-900/30 border-green-700/50'
-      case 'warning': return 'bg-yellow-900/30 border-yellow-700/50'
-      case 'danger': return 'bg-red-900/30 border-red-700/50'
+      case 'safe': return 'bg-compound-success-900/20 border-compound-success-700/30'
+      case 'warning': return 'bg-compound-warning-900/20 border-compound-warning-700/30'
+      case 'danger': return 'bg-compound-error-900/20 border-compound-error-700/30'
     }
   }
 
@@ -181,12 +181,12 @@ export function HealthFactorMonitor() {
   if (!mounted) return null
 
   return (
-    <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+    <Card className="compound-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">Health Factor</CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-text-tertiary">
               WETH collateral safety monitoring
             </CardDescription>
           </div>
@@ -209,21 +209,21 @@ export function HealthFactorMonitor() {
       
       <CardContent>
         {!isConnected ? (
-          <div className="text-center py-6 text-gray-400">
+          <div className="text-center py-6 text-text-tertiary">
             <Shield className="mx-auto h-8 w-8 mb-2 opacity-50" />
             <p className="text-sm">Connect your wallet to monitor health factor</p>
           </div>
         ) : loading && !healthData ? (
-          <div className="text-center py-6 text-gray-400">
+          <div className="text-center py-6 text-text-tertiary">
             <Loader2 className="mx-auto h-6 w-6 mb-2 animate-spin" />
             <p className="text-sm">Loading health data...</p>
           </div>
         ) : error ? (
-          <div className="text-center py-6 text-red-400">
+          <div className="text-center py-6 text-compound-error-400">
             <p className="text-sm mb-2">{error}</p>
             <button 
               onClick={fetchHealthData}
-              className="text-xs text-blue-400 hover:text-blue-300"
+              className="text-xs text-compound-primary-400 hover:text-compound-primary-300"
             >
               Try again
             </button>
@@ -231,7 +231,7 @@ export function HealthFactorMonitor() {
         ) : healthData ? (
           <div className="space-y-4">
             {/* Health Factor Display */}
-            <div className="bg-[#252836] p-4 rounded-lg">
+            <div className="bg-bg-tertiary p-4 rounded-lg">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className={`p-2 rounded-full ${getRiskBg(healthData.liquidationRisk)}`}>
@@ -251,7 +251,7 @@ export function HealthFactorMonitor() {
                 <div className={`text-3xl font-bold mb-1 ${getRiskColor(healthData.liquidationRisk)}`}>
                   {healthData.healthFactor > 999 ? '∞' : healthData.healthFactor.toFixed(2)}x
                 </div>
-                <div className="text-xs text-gray-400">Safety Margin</div>
+                <div className="text-xs text-text-tertiary">Safety Margin</div>
               </div>
 
               {/* Risk Message */}
@@ -263,7 +263,7 @@ export function HealthFactorMonitor() {
             </div>
 
             {/* Position Details */}
-            <div className="bg-[#252836] p-4 rounded-lg">
+            <div className="bg-bg-tertiary p-4 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
                   <span className="text-xs font-bold text-white">W</span>
@@ -273,35 +273,35 @@ export function HealthFactorMonitor() {
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-green-400">
+                  <div className="text-lg font-semibold text-compound-success-400">
                     ${healthData.collateralValue.toFixed(2)}
                   </div>
-                  <div className="text-xs text-gray-400">WETH Collateral Value</div>
+                  <div className="text-xs text-text-tertiary">WETH Collateral Value</div>
                 </div>
                 
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-red-400">
+                  <div className="text-lg font-semibold text-compound-error-400">
                     ${healthData.borrowValue.toFixed(2)}
                   </div>
-                  <div className="text-xs text-gray-400">USDC Borrowed</div>
+                  <div className="text-xs text-text-tertiary">USDC Borrowed</div>
                 </div>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-gray-700">
+              <div className="mt-3 pt-3 border-t border-border-primary">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Collateral Ratio:</span>
+                  <span className="text-text-tertiary">Collateral Ratio:</span>
                   <span className="font-medium">{healthData.collateralRatio.toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Liquidation Threshold:</span>
+                  <span className="text-text-tertiary">Liquidation Threshold:</span>
                   <span className="font-medium">${healthData.liquidationThreshold.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Info */}
-            <div className="bg-[#252836] p-3 rounded-lg">
-              <div className="text-xs text-gray-400 text-center">
+            <div className="bg-bg-tertiary p-3 rounded-lg">
+              <div className="text-xs text-text-tertiary text-center">
                 Health factor updates when you refresh<br/>
                 WETH price: ${healthData.wethPrice.toFixed(2)} (Chainlink)<br/>
                 Updated: {new Date(healthData.priceUpdatedAt).toLocaleTimeString()}
@@ -309,7 +309,7 @@ export function HealthFactorMonitor() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-6 text-gray-400">
+          <div className="text-center py-6 text-text-tertiary">
             <p className="text-sm">No position data available</p>
           </div>
         )}

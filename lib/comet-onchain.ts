@@ -1,22 +1,45 @@
 "use client"
 
-import { createPublicClient, createWalletClient, http, parseUnits } from "viem"
-import { hardhat } from "viem/chains"
+import { createPublicClient, createWalletClient, http, parseUnits, defineChain } from "viem"
+import { hardhat, sepolia } from "viem/chains"
 import cometAbi from "./abis/comet.json"
 import erc20Abi from "./abis/erc20.json"
+import { getCurrentNetworkConfig, getRpcUrl } from "./network-config"
 
-const rpcUrl = process.env.NEXT_PUBLIC_LOCAL_RPC_URL || "http://127.0.0.1:8545"
+// Get current network configuration
+const networkConfig = getCurrentNetworkConfig()
+const rpcUrl = getRpcUrl()
 
-export const publicClient = createPublicClient({ chain: hardhat, transport: http(rpcUrl) })
+// Create chain configuration based on current network
+const chain = networkConfig.chainId === 31337 
+  ? hardhat 
+  : networkConfig.chainId === 11155111 
+    ? sepolia 
+    : defineChain({
+        id: networkConfig.chainId,
+        name: networkConfig.name,
+        nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+        rpcUrls: {
+          default: { http: [rpcUrl] },
+          public: { http: [rpcUrl] }
+        },
+        blockExplorers: {
+          default: { name: 'Explorer', url: networkConfig.explorerUrl }
+        }
+      })
+
+export const publicClient = createPublicClient({ chain, transport: http(rpcUrl) })
 
 export function getWalletClient() {
 	if (typeof window === "undefined") throw new Error("wallet client only available in browser")
-	return createWalletClient({ chain: hardhat, transport: http(rpcUrl) })
+	return createWalletClient({ chain, transport: http(rpcUrl) })
 }
 
-export const COMET_ADDRESS = (process.env.NEXT_PUBLIC_COMET_ADDRESS || "0xc3d688B66703497DAA19211EEdff47f25384cdc3") as `0x${string}`
-export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48") as `0x${string}`
-export const WETH_ADDRESS = (process.env.NEXT_PUBLIC_WETH_ADDRESS || "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2") as `0x${string}`
+// Use network configuration for contract addresses
+export const COMET_ADDRESS = networkConfig.cometAddress
+export const USDC_ADDRESS = networkConfig.usdcAddress
+export const WETH_ADDRESS = networkConfig.wethAddress
+export const CHAINLINK_ETH_USD_FEED = networkConfig.chainlinkEthUsdFeed
 
 export async function getBaseBalances(account: `0x${string}`) {
 	const [supplied, borrowed] = await Promise.all([

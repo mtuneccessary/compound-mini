@@ -165,11 +165,11 @@ export function MarketInsightsPanel() {
   if (!mounted) return null
 
   return (
-    <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+    <Card className="compound-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-blue-400" />
+            <BarChart3 className="h-5 w-5 text-compound-primary-400" />
             <CardTitle className="text-lg">Market Insights</CardTitle>
           </div>
           <button
@@ -181,14 +181,14 @@ export function MarketInsightsPanel() {
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
-        <CardDescription className="text-gray-400 text-sm">
+        <CardDescription className="text-text-tertiary text-sm">
           USDC Market Overview • Compound Comet v3
         </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-4">
         {loading && !marketData ? (
-          <div className="text-center py-6 text-gray-400">
+          <div className="text-center py-6 text-text-tertiary">
             <Loader2 className="mx-auto h-6 w-6 mb-2 animate-spin" />
             <p className="text-sm">Loading market data...</p>
           </div>
@@ -198,7 +198,7 @@ export function MarketInsightsPanel() {
             <p className="text-sm mb-2">{error}</p>
             <button 
               onClick={fetchMarketData}
-              className="text-xs text-blue-400 hover:text-blue-300"
+              className="text-xs text-compound-primary-400 hover:text-compound-primary-300"
             >
               Try again
             </button>
@@ -206,9 +206,9 @@ export function MarketInsightsPanel() {
         ) : marketData ? (
           <>
             {/* Market Overview - Mobile Optimized */}
-            <div className="bg-[#252836] p-4 rounded-lg">
+            <div className="bg-bg-tertiary p-4 rounded-lg">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-blue-400">USDC Market</span>
+                <span className="text-sm font-semibold text-compound-primary-400">USDC Market</span>
                 <Badge 
                   variant={getUtilizationBadge(marketData.utilization).color as any}
                   className="text-xs"
@@ -219,7 +219,7 @@ export function MarketInsightsPanel() {
               
               {/* Utilization Bar - Mobile Friendly */}
               <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <div className="flex justify-between text-xs text-text-tertiary mb-1">
                   <span>Utilization</span>
                   <span className={getUtilizationColor(marketData.utilization)}>
                     {marketData.utilization.toFixed(1)}%
@@ -238,37 +238,37 @@ export function MarketInsightsPanel() {
 
               {/* Key Metrics - Stacked for Mobile */}
               <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="bg-[#1a1d26] p-2 rounded">
+                <div className="bg-bg-secondary p-2 rounded">
                   <div className="text-lg font-semibold text-green-400">
                     ${(marketData.totalSupply / 1e6).toFixed(1)}M
                   </div>
-                  <div className="text-xs text-gray-400">Total Supply</div>
+                  <div className="text-xs text-text-tertiary">Total Supply</div>
                 </div>
-                <div className="bg-[#1a1d26] p-2 rounded">
+                <div className="bg-bg-secondary p-2 rounded">
                   <div className="text-lg font-semibold text-red-400">
                     ${(marketData.totalBorrowed / 1e6).toFixed(1)}M
                   </div>
-                  <div className="text-xs text-gray-400">Total Borrowed</div>
+                  <div className="text-xs text-text-tertiary">Total Borrowed</div>
                 </div>
               </div>
             </div>
 
             {/* Rates Comparison - Mobile Optimized */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#252836] p-3 rounded-lg text-center">
+              <div className="bg-bg-tertiary p-3 rounded-lg text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <TrendingUp className="h-4 w-4 text-green-400" />
-                  <span className="text-xs text-gray-400">Supply APY</span>
+                  <span className="text-xs text-text-tertiary">Supply APY</span>
                 </div>
                 <div className="text-lg font-semibold text-green-400">
                   {marketData.supplyRate.toFixed(2)}%
                 </div>
               </div>
               
-              <div className="bg-[#252836] p-3 rounded-lg text-center">
+              <div className="bg-bg-tertiary p-3 rounded-lg text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <TrendingDown className="h-4 w-4 text-red-400" />
-                  <span className="text-xs text-gray-400">Borrow APR</span>
+                  <span className="text-xs text-text-tertiary">Borrow APR</span>
                 </div>
                 <div className="text-lg font-semibold text-red-400">
                   {marketData.borrowRate.toFixed(2)}%
@@ -277,27 +277,27 @@ export function MarketInsightsPanel() {
             </div>
 
             {/* Liquidity Info - Mobile Friendly */}
-            <div className="bg-[#252836] p-3 rounded-lg">
+            <div className="bg-bg-tertiary p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Activity className="h-4 w-4 text-blue-400" />
+                <Activity className="h-4 w-4 text-compound-primary-400" />
                 <span className="text-sm font-semibold">Liquidity</span>
               </div>
               
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Available Reserves</span>
+                  <span className="text-text-tertiary">Available Reserves</span>
                   <span className="text-white">
                     ${(marketData.reserveBalance / 1e6).toFixed(2)}M
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Total Assets</span>
+                  <span className="text-text-tertiary">Total Assets</span>
                   <span className="text-white">
                     ${(marketData.totalAssets / 1e6).toFixed(2)}M
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Liquidity Ratio</span>
+                  <span className="text-text-tertiary">Liquidity Ratio</span>
                   <span className="text-white">
                     {((marketData.reserveBalance / marketData.totalAssets) * 100).toFixed(1)}%
                   </span>
@@ -306,9 +306,9 @@ export function MarketInsightsPanel() {
             </div>
 
             {/* Market Health Indicator */}
-            <div className="bg-[#252836] p-3 rounded-lg">
+            <div className="bg-bg-tertiary p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Info className="h-4 w-4 text-blue-400" />
+                <Info className="h-4 w-4 text-compound-primary-400" />
                 <span className="text-sm font-semibold">Market Health</span>
               </div>
               
@@ -317,7 +317,7 @@ export function MarketInsightsPanel() {
                   ⚠️ High utilization may indicate limited liquidity for large withdrawals
                 </div>
               ) : marketData.utilization > 60 ? (
-                <div className="text-xs text-blue-400">
+                <div className="text-xs text-compound-primary-400">
                   ℹ️ Moderate utilization - healthy market conditions
                 </div>
               ) : (
@@ -328,12 +328,12 @@ export function MarketInsightsPanel() {
             </div>
 
             {/* Last Updated */}
-            <div className="text-center text-xs text-gray-500">
+            <div className="text-center text-xs text-text-muted">
               Last updated: {new Date(marketData.lastUpdated).toLocaleTimeString()}
             </div>
           </>
         ) : (
-          <div className="text-center py-6 text-gray-400">
+          <div className="text-center py-6 text-text-tertiary">
             <BarChart3 className="mx-auto h-6 w-6 mb-2 opacity-50" />
             <p className="text-sm">No market data available</p>
           </div>
