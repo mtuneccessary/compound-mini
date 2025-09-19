@@ -1,36 +1,48 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { formatCurrency, formatPercentage } from "@/lib/utils"
-import { ArrowDownLeft, CheckCircle, Shield, Zap, TrendingUp } from "lucide-react"
-import Image from "next/image"
+import { Badge } from "@/components/ui/badge"
+import { 
+  ArrowDownLeft, 
+  TrendingDown, 
+  ArrowRight, 
+  CheckCircle,
+  AlertCircle,
+  Shield,
+  DollarSign
+} from "lucide-react"
 import { useFeedback } from "@/lib/feedback-provider"
-import cometAbi from "@/lib/abis/comet.json"
-import erc20Abi from "@/lib/abis/erc20.json"
 import { useAccount } from "wagmi"
-import { publicClient, COMET_ADDRESS, WETH_ADDRESS, USDC_ADDRESS } from "@/lib/comet-onchain"
-import { parseUnits } from "viem"
+import Image from "next/image"
+import { motion } from "framer-motion"
+import { publicClient, USDC_ADDRESS, COMET_ADDRESS } from "@/lib/comet-onchain"
+import erc20Abi from "@/lib/abis/erc20.json"
+import cometAbi from "@/lib/abis/comet.json"
+import { useRepayUSDC, useAllowance } from "@/lib/wagmi-hooks"
+import { formatUnits } from "viem"
+
+const USDC_DECIMALS = 6
 
 export function RepayForm() {
   const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
   const { address, isConnected } = useAccount()
 
   const [amount, setAmount] = useState("")
-  const [borrowApy, setBorrowApy] = useState(0)
   const [usdcBalance, setUsdcBalance] = useState(0)
   const [borrowBalance, setBorrowBalance] = useState(0)
   const [collateralBalance, setCollateralBalance] = useState(0)
-  const [healthFactor, setHealthFactor] = useState(999)
+  const [borrowApy, setBorrowApy] = useState(0)
   const [mounted, setMounted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [repaySuccess, setRepaySuccess] = useState(false)
+  const [needsApproval, setNeedsApproval] = useState(false)
 
-  const USDC_DECIMALS = 6
-  const USDC_PRICE_USD = 1 // USDC is pegged to USD
+  // Wagmi hooks
+  const { repayUSDC, repayUSDCAfterApproval, hash, error, isPending, isConfirming, isConfirmed } = useRepayUSDC()
+  const { data: allowance } = useAllowance(USDC_ADDRESS, COMET_ADDRESS, address || "0x0")
 
   useEffect(() => {
     setMounted(true)
@@ -42,61 +54,82 @@ export function RepayForm() {
     }
   }, [isConnected, address])
 
+  // Handle transaction states
+  useEffect(() => {
+    if (isPending) {
+      showLoading(needsApproval ? "Approving USDC..." : "Repaying USDC...")
+    } else if (isConfirming) {
+      showLoading("Confirming transaction...")
+    } else if (isConfirmed) {
+      if (needsApproval) {
+        setNeedsApproval(false)
+        hideLoading()
+        showSuccess("Approval successful", "USDC approved for Compound Mini.")
+        // Automatically proceed to repay
+        setTimeout(() => {
+          repayUSDCAfterApproval(amount)
+        }, 1000)
+      } else {
+        hideLoading()
+        showSuccess("Repay successful", `${amount} USDC repaid to Compound Mini.`)
+        setRepaySuccess(true)
+        // Refresh balances
+        loadRepayData()
+        // Notify other parts of the app
+        try {
+          const evt = new Event('onchain:updated')
+          window.dispatchEvent(evt)
+        } catch {}
+      }
+    } else if (error) {
+      hideLoading()
+      const msg = error?.shortMessage || error?.message || "Transaction failed"
+      showError("Transaction Failed", msg)
+    }
+  }, [isPending, isConfirming, isConfirmed, error, needsApproval, amount])
+
   const loadRepayData = async () => {
     try {
-      const { ethers } = await import("ethers")
-      if (!(window as any).ethereum) return
-      
-      const provider = new ethers.BrowserProvider((window as any).ethereum)
-      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, provider)
-      
-      // Load all relevant data
-      const [usdcBal, borrowBal, collateralBal, utilization] = await Promise.all([
-        publicClient.readContract({
-          address: USDC_ADDRESS,
-          abi: erc20Abi as any,
-          functionName: "balanceOf",
-          args: [address],
-        }) as Promise<bigint>,
-        publicClient.readContract({
-          address: COMET_ADDRESS,
-          abi: cometAbi as any,
-          functionName: "borrowBalanceOf",
-          args: [address],
-        }) as Promise<bigint>,
-        publicClient.readContract({
-          address: COMET_ADDRESS,
-          abi: cometAbi as any,
-          functionName: "collateralBalanceOf",
-          args: [address, WETH_ADDRESS],
-        }) as Promise<bigint>,
-        comet.getUtilization() as Promise<bigint>
-      ])
+      // Fetch USDC balance
+      const usdcBalance = await publicClient.readContract({
+        address: USDC_ADDRESS,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [address],
+      })
+      setUsdcBalance(Number(formatUnits(usdcBalance, USDC_DECIMALS)))
 
-      const usdcValue = Number(usdcBal) / 1e6
-      const borrowValue = Number(borrowBal) / 1e6
-      const collateralValue = Number(collateralBal) / 1e18
-      
-      // Calculate health factor
-      const wethPrice = 3000 // Placeholder
-      const collateralValueUSD = collateralValue * wethPrice
-      const healthFactor = borrowValue > 0 ? (collateralValueUSD * 0.85) / borrowValue : 999
+      // Fetch borrow balance
+      const borrowBalance = await publicClient.readContract({
+        address: COMET_ADDRESS,
+        abi: cometAbi,
+        functionName: "borrowBalanceOf",
+        args: [address, USDC_ADDRESS],
+      })
+      setBorrowBalance(Number(formatUnits(borrowBalance, USDC_DECIMALS)))
 
-      // Get real borrow rate
-      const borrowRate = await comet.getBorrowRate(utilization)
-      const apy = (Number(borrowRate) / 1e18) * 31536000 * 100
+      // Fetch collateral balance
+      const collateralBalance = await publicClient.readContract({
+        address: COMET_ADDRESS,
+        abi: cometAbi,
+        functionName: "collateralBalanceOf",
+        args: [address, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"], // WETH address
+      })
+      setCollateralBalance(Number(formatUnits(collateralBalance, 18)))
 
-      setUsdcBalance(usdcValue)
-      setBorrowBalance(borrowValue)
-      setCollateralBalance(collateralValue)
-      setHealthFactor(healthFactor)
-      setBorrowApy(apy)
+      // Fetch borrow rate
+      const borrowRate = await publicClient.readContract({
+        address: COMET_ADDRESS,
+        abi: cometAbi,
+        functionName: "getBorrowRate",
+        args: [USDC_ADDRESS],
+      })
+      setBorrowApy(Number(formatUnits(borrowRate, 18)) * 100)
     } catch (error) {
       console.error("Error loading repay data:", error)
       setUsdcBalance(0)
       setBorrowBalance(0)
       setCollateralBalance(0)
-      setHealthFactor(999)
       setBorrowApy(0)
     }
   }
@@ -119,46 +152,29 @@ export function RepayForm() {
       return
     }
 
+    if (!address) {
+      showError("Wallet Error", "Please connect your wallet")
+      return
+    }
+
     setIsSubmitting(true)
-    showLoading(`Repaying ${amount} USDC...`)
-
-    try {
-      const { ethers } = await import("ethers")
-      if (!(window as any).ethereum) throw new Error("No wallet detected")
-      const provider = new ethers.BrowserProvider((window as any).ethereum)
-      const signer = await provider.getSigner()
-
-      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, signer)
-      const erc20 = new ethers.Contract(USDC_ADDRESS, erc20Abi as any, signer)
-      const rawAmount = parseUnits(amount, USDC_DECIMALS)
-
-      // Check allowance
-      const allowance = await erc20.allowance(address, COMET_ADDRESS)
-      if (allowance < rawAmount) {
-        showLoading("Approving USDC...")
-        const approveTx = await erc20.approve(COMET_ADDRESS, rawAmount)
-        await approveTx.wait()
-        showSuccess("Approval successful", "USDC approved for Compound Mini.")
-      }
-
-      // Execute repay (supply USDC to reduce debt)
-      showLoading(`Repaying ${amount} USDC...`)
-      const repayTx = await comet.supply(USDC_ADDRESS, rawAmount)
-      await repayTx.wait()
-
-      hideLoading()
-      setRepaySuccess(true)
-    } catch (error: any) {
-      hideLoading()
-      const msg = error?.shortMessage || error?.reason || error?.message || "Transaction failed"
-      showError("Repay failed", msg)
-    } finally {
-      setIsSubmitting(false)
+    
+    // Check if approval is needed
+    const requiredAmount = BigInt(parseFloat(amount) * 1e6) // USDC has 6 decimals
+    if (!allowance || allowance < requiredAmount) {
+      setNeedsApproval(true)
+      repayUSDC(amount, address)
+    } else {
+      repayUSDCAfterApproval(amount)
     }
   }
 
   const handleMaxClick = () => {
     setAmount(Math.min(usdcBalance, borrowBalance).toString())
+  }
+
+  const formatCurrency = (value: number, symbol: string) => {
+    return `${value.toFixed(2)} ${symbol}`
   }
 
   const projectedInterestSaved = Number(amount) * (borrowApy / 100)
@@ -202,10 +218,16 @@ export function RepayForm() {
               </div>
             </div>
             <Button 
-              onClick={() => window.location.href = "/dashboard"}
+              onClick={() => {
+                setRepaySuccess(false)
+                setAmount("")
+                loadRepayData()
+              }}
+              size="lg" 
               className="w-full bg-green-600 hover:bg-green-700 text-white h-12"
             >
-              Go to Dashboard
+              <ArrowRight className="h-5 w-5 mr-2" />
+              Repay More USDC
             </Button>
           </CardContent>
         </Card>
@@ -213,177 +235,139 @@ export function RepayForm() {
     )
   }
 
-  if (!isConnected) {
-    return (
-      <div className="p-4">
-        <Card className="bg-[#1a1d26] border-[#2a2d36] text-white text-center py-8">
-          <CardHeader>
-            <Image src="/usdc-icon.webp" alt="USDC" width={60} height={60} className="mx-auto mb-4" />
-            <CardTitle className="text-2xl">Connect Wallet to Repay</CardTitle>
-            <CardDescription className="text-gray-400">
-              Please connect your wallet to repay your USDC debt.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
   return (
-    <div className="p-4 space-y-4 pb-24">
-      {/* Current Position Card */}
-      <Card className="bg-gradient-to-r from-red-800/30 to-orange-800/30 border-red-500/20 text-white">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Image src="/usdc-icon.webp" alt="USDC" width={32} height={32} className="rounded-full" />
-              <div>
-                <p className="text-sm text-gray-300">Current Debt</p>
-                <p className="text-2xl font-bold">
-                  ${borrowBalance.toFixed(2)} USDC
-                </p>
-              </div>
+    <div className="p-4 pb-24">
+      <Card className="bg-gradient-to-br from-red-900/20 to-orange-900/20 border-red-500/20 text-white">
+        <CardContent className="p-8">
+          <div className="flex items-center mb-6">
+            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mr-4">
+              <ArrowDownLeft className="h-6 w-6 text-red-400" />
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-300">Health Factor</p>
-              <p className={`text-xl font-bold ${healthFactor >= 2 ? 'text-green-400' : healthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
-                {healthFactor > 999 ? '∞' : healthFactor.toFixed(2)}x
-              </p>
+            <div>
+              <h2 className="text-2xl font-semibold">Repay USDC</h2>
+              <p className="text-gray-400">Reduce your debt and save on interest</p>
             </div>
           </div>
-          
-          <div className="flex items-center justify-between pt-4 border-t border-red-500/20">
-            <div className="flex items-center gap-3">
-              <Image src="/usdc-icon.webp" alt="USDC" width={24} height={24} className="rounded-full" />
-              <div>
-                <p className="text-sm text-gray-300">Available to Repay</p>
-                <p className="text-lg font-bold">
-                  ${usdcBalance.toFixed(2)} USDC
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-300">Borrow Rate</p>
-              <p className="text-lg font-bold text-red-400">
-                {borrowApy > 0 ? `${borrowApy.toFixed(2)}%` : 'Loading...'}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Repay Form */}
-      <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-        <CardHeader>
-          <CardTitle className="text-xl">Repay USDC</CardTitle>
-          <CardDescription className="text-gray-400">
-            Repay your USDC debt to reduce interest costs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="amount" className="text-gray-300">Amount to Repay</Label>
-              <span className="text-sm text-gray-400">USDC only</span>
+          <div className="space-y-6">
+            {/* Balance Display */}
+            <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">USDC Balance</span>
+                <span className="text-white font-semibold">
+                  {formatCurrency(usdcBalance, "USDC")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">Current Debt</span>
+                <span className="text-red-400 font-semibold">
+                  {formatCurrency(borrowBalance, "USDC")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Borrow APY</span>
+                <Badge variant="secondary" className="bg-red-500/20 text-red-400 border-red-500/30">
+                  <TrendingDown className="h-3 w-3 mr-1" />
+                  {borrowApy.toFixed(2)}%
+                </Badge>
+              </div>
             </div>
-            <div className="relative">
-              <Input
-                id="amount"
-                type="number"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="bg-[#252836] border-[#2a2d36] pr-20 h-14 text-lg"
-              />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <Image src="/usdc-icon.webp" alt="USDC" width={20} height={20} className="rounded-full" />
-                <span className="text-white font-semibold">USDC</span>
+
+            {/* Amount Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300">Amount to Repay</label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="bg-[#1a1d26] border-[#2a2d36] text-white placeholder-gray-500 h-12 pr-20"
+                  disabled={isSubmitting || isPending || isConfirming}
+                />
                 <Button
-                  variant="ghost"
+                  type="button"
+                  variant="outline"
                   size="sm"
-                  className="h-8 text-xs text-blue-400 hover:text-blue-300"
                   onClick={handleMaxClick}
+                  className="absolute right-2 top-2 bg-red-600/20 border-red-500/30 text-red-400 hover:bg-red-600/30"
+                  disabled={isSubmitting || isPending || isConfirming}
                 >
                   MAX
                 </Button>
               </div>
             </div>
-          </div>
 
-          {/* Repay Preview */}
-          <div className="bg-[#252836] p-4 rounded-lg space-y-3 border border-[#2a2d36]">
-            <div className="text-lg font-semibold text-white">Repay Overview</div>
-            <div className="flex justify-between text-sm text-gray-300">
-              <span>Interest Saved Annually</span>
-              <span className="font-medium text-green-400">
-                ${projectedInterestSaved.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-300">
-              <span>New Health Factor</span>
-              <span className={`font-medium ${newHealthFactor >= 2 ? 'text-green-400' : newHealthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
-                {newHealthFactor > 999 ? '∞' : newHealthFactor.toFixed(2)}x
-              </span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-300">
-              <span>Remaining Debt</span>
-              <span>${newBorrowBalance.toFixed(2)} USDC</span>
-            </div>
-          </div>
-
-          <Button
-            className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white h-12 text-lg font-semibold"
-            onClick={handleRepay}
-            disabled={!isConnected || isSubmitting || !amount || Number.parseFloat(amount) <= 0 || borrowBalance <= 0 || Number.parseFloat(amount) > usdcBalance}
-          >
-            {isSubmitting ? (
-              <div className="flex items-center">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Processing Transaction...
+            {/* Projection */}
+            {amount && Number.parseFloat(amount) > 0 && (
+              <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-300 mb-3">Repay Preview</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Interest Saved Annually</span>
+                    <span className="text-green-400 font-semibold">
+                      ${projectedInterestSaved.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">New Debt Balance</span>
+                    <span className="text-white font-semibold">
+                      {formatCurrency(Math.max(borrowBalance - Number(amount), 0), "USDC")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">New Health Factor</span>
+                    <span className={`font-semibold ${newHealthFactor >= 2 ? 'text-green-400' : newHealthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {newHealthFactor > 999 ? '∞' : newHealthFactor.toFixed(2)}x
+                    </span>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <>
-                <ArrowDownLeft className="mr-2 h-5 w-5" />
-                Repay USDC
-              </>
             )}
-          </Button>
+
+            {/* Action Button */}
+            <Button
+              onClick={handleRepay}
+              disabled={
+                !amount || 
+                Number.parseFloat(amount) <= 0 || 
+                Number.parseFloat(amount) > usdcBalance ||
+                borrowBalance <= 0 ||
+                isSubmitting || 
+                isPending || 
+                isConfirming
+              }
+              size="lg"
+              className="w-full bg-red-600 hover:bg-red-700 text-white h-12"
+            >
+              {isSubmitting || isPending || isConfirming ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {needsApproval ? "Approving..." : "Repaying..."}
+                </>
+              ) : (
+                <>
+                  <ArrowDownLeft className="h-5 w-5 mr-2" />
+                  Repay USDC
+                </>
+              )}
+            </Button>
+
+            {/* Safety Notice */}
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+              <div className="flex items-start">
+                <Shield className="h-5 w-5 text-yellow-400 mr-3 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-yellow-400 mb-1">Repay Notice</h4>
+                  <p className="text-xs text-gray-400">
+                    Repaying reduces your debt and saves on interest payments. Your health factor will improve.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      {/* Benefits Section */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-white">Why Repay Early?</h3>
-        <div className="grid grid-cols-1 gap-3">
-          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-            <CardContent className="p-4 flex items-center gap-3">
-              <CheckCircle className="h-6 w-6 text-green-400" />
-              <div>
-                <h4 className="font-semibold">Save on Interest</h4>
-                <p className="text-sm text-gray-400">Reduce your annual interest costs immediately.</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-            <CardContent className="p-4 flex items-center gap-3">
-              <Shield className="h-6 w-6 text-blue-400" />
-              <div>
-                <h4 className="font-semibold">Improve Health Factor</h4>
-                <p className="text-sm text-gray-400">Lower your debt-to-collateral ratio for better safety.</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-            <CardContent className="p-4 flex items-center gap-3">
-              <Zap className="h-6 w-6 text-purple-400" />
-              <div>
-                <h4 className="font-semibold">Flexible Repayment</h4>
-                <p className="text-sm text-gray-400">Repay any amount, anytime to reduce costs.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
     </div>
   )
 }
