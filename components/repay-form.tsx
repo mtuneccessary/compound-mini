@@ -121,7 +121,7 @@ export function RepayForm() {
       writeContract({
         address: COMET_ADDRESS,
         abi: cometAbi,
-        functionName: "repay",
+        functionName: "supply",
         args: [USDC_ADDRESS, rawAmount],
       })
     } else if (isConfirmed && hash && step === 'repaying') {
