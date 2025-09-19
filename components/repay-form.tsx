@@ -1,28 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { 
-  ArrowDownLeft, 
-  TrendingDown, 
-  ArrowRight, 
-  CheckCircle,
-  AlertCircle,
-  Shield,
-  DollarSign
-} from "lucide-react"
-import { useFeedback } from "@/lib/feedback-provider"
-import { useAccount } from "wagmi"
+import { Label } from "@/components/ui/label"
+import { formatCurrency, formatPercentage } from "@/lib/utils"
+import { ArrowDownLeft, CheckCircle, Shield, Zap, TrendingDown, DollarSign } from "lucide-react"
 import Image from "next/image"
-import { motion } from "framer-motion"
-import { publicClient, USDC_ADDRESS, COMET_ADDRESS } from "@/lib/comet-onchain"
-import erc20Abi from "@/lib/abis/erc20.json"
+import { useFeedback } from "@/lib/feedback-provider"
 import cometAbi from "@/lib/abis/comet.json"
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import erc20Abi from "@/lib/abis/erc20.json"
+import { useAccount } from "wagmi"
+import { publicClient, COMET_ADDRESS, WETH_ADDRESS, USDC_ADDRESS } from "@/lib/comet-onchain"
 import { parseUnits, formatUnits } from "viem"
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi"
 
 const USDC_DECIMALS = 6
 
@@ -35,11 +27,13 @@ export function RepayForm() {
   const [borrowBalance, setBorrowBalance] = useState(0)
   const [collateralBalance, setCollateralBalance] = useState(0)
   const [borrowRate, setBorrowRate] = useState(0)
-  const [utilization, setUtilization] = useState(0)
+  const [healthFactor, setHealthFactor] = useState(999)
   const [mounted, setMounted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [repaySuccess, setRepaySuccess] = useState(false)
   const [step, setStep] = useState<'idle' | 'approving' | 'repaying'>('idle')
+
+  const USDC_PRICE_USD = 1 // USDC is pegged to USD
 
   // Wagmi hooks - always called
   const { writeContract, data: hash, error, isPending } = useWriteContract()
@@ -53,18 +47,18 @@ export function RepayForm() {
 
   useEffect(() => {
     if (isConnected && address) {
-      loadBorrowData()
+      loadRepayData()
     }
   }, [isConnected, address])
 
-  const loadBorrowData = async () => {
+  const loadRepayData = async () => {
     try {
       // Fetch collateral balance
       const collateral = await publicClient.readContract({
         address: COMET_ADDRESS,
         abi: cometAbi,
         functionName: "collateralBalanceOf",
-        args: [address, "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"], // WETH address
+        args: [address, WETH_ADDRESS],
       })
       setCollateralBalance(Number(formatUnits(collateral, 18)))
 
@@ -95,21 +89,17 @@ export function RepayForm() {
       })
       setBorrowRate(Number(formatUnits(rate, 18)) * 100)
 
-      // Fetch utilization
-      const util = await publicClient.readContract({
-        address: COMET_ADDRESS,
-        abi: cometAbi,
-        functionName: "getUtilization",
-        args: [],
-      })
-      setUtilization(Number(formatUnits(util, 18)) * 100)
+      // Calculate health factor
+      const collateralValueUSD = collateralBalance * 3000 // WETH price
+      const healthFactor = borrowBalance > 0 ? (collateralValueUSD * 0.85) / borrowBalance : 999
+      setHealthFactor(healthFactor)
     } catch (error) {
-      console.error("Error loading borrow data:", error)
+      console.error("Error loading repay data:", error)
       setCollateralBalance(0)
       setBorrowBalance(0)
       setUsdcBalance(0)
       setBorrowRate(0)
-      setUtilization(0)
+      setHealthFactor(999)
     }
   }
 
@@ -133,7 +123,7 @@ export function RepayForm() {
       setStep('idle')
       
       // Refresh balances
-      loadBorrowData()
+      loadRepayData()
       
       // Notify other parts of the app
       try {
@@ -156,43 +146,14 @@ export function RepayForm() {
 
   if (!mounted) return null
 
-  if (!isConnected) {
-    return (
-      <div className="p-4 pb-24">
-        <Card className="bg-gradient-to-br from-red-900/20 to-orange-900/20 border-red-500/20 text-white">
-          <CardContent className="p-8 text-center">
-            <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ArrowDownLeft className="h-10 w-10 text-red-400" />
-            </div>
-            <h2 className="text-2xl font-semibold mb-3">Connect Your Wallet</h2>
-            <p className="text-gray-400 mb-6">
-              Connect your wallet to repay your borrowings.
-            </p>
-            <Button 
-              size="lg" 
-              className="w-full bg-red-600 hover:bg-red-700 text-white h-12"
-            >
-              <ArrowDownLeft className="h-5 w-5 mr-2" />
-              Connect Wallet to Repay
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const handleMaxClick = () => {
-    setAmount(Math.min(usdcBalance, borrowBalance).toString())
-  }
-
   const handleRepay = async () => {
     if (!amount || Number.parseFloat(amount) <= 0) {
-      showError("Invalid Amount", "Please enter a valid amount to repay")
+      showError("Invalid input", "Please enter a valid amount")
       return
     }
 
     if (Number.parseFloat(amount) > usdcBalance) {
-      showError("Insufficient Balance", "You don't have enough USDC in your wallet")
+      showError("Insufficient Balance", `You only have ${formatCurrency(usdcBalance, "USDC")} available`)
       return
     }
 
@@ -224,166 +185,254 @@ export function RepayForm() {
     }
   }
 
+  const handleMaxClick = () => {
+    setAmount(Math.min(usdcBalance, borrowBalance).toString())
+  }
+
+  const interestSaved = Number(amount) * (borrowRate / 100)
+  const newBorrowBalance = Math.max(borrowBalance - Number(amount), 0)
+  const newHealthFactor = newBorrowBalance > 0 ? (collateralBalance * 3000 * 0.85) / newBorrowBalance : 999
+
   const isLoading = isPending || isConfirming || isSubmitting
   const buttonText = step === 'approving' ? 'Approving...' : 
                    step === 'repaying' ? 'Repaying...' : 
                    'Repay USDC'
 
-  return (
-    <div className="p-4 pb-24">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+  // Success state
+  if (repaySuccess) {
+    return (
+      <div className="p-4 pb-24">
         <Card className="bg-gradient-to-br from-red-900/20 to-orange-900/20 border-red-500/20 text-white">
-          <CardContent className="p-8">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
-                <ArrowDownLeft className="h-8 w-8 text-red-400" />
+          <CardContent className="p-8 text-center">
+            <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ArrowDownLeft className="h-12 w-12 text-red-400" />
+            </div>
+            <h2 className="text-3xl font-bold text-red-400 mb-3">Repay Successful!</h2>
+            <p className="text-xl text-white mb-2">
+              You have repaid <span className="font-bold text-red-400">{amount} USDC</span>
+            </p>
+            <p className="text-gray-400 mb-6">
+              Borrow rate: {borrowRate.toFixed(2)}% APY
+            </p>
+            <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4 mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">Interest Saved Annually</span>
+                <span className="text-green-400 font-semibold">
+                  {interestSaved.toFixed(2)} USDC
+                </span>
               </div>
-              <div>
-                <h2 className="text-2xl font-semibold">Repay USDC</h2>
-                <p className="text-gray-400">Reduce your borrowing position</p>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">USD Value</span>
+                <span className="text-white font-semibold">
+                  ${interestSaved.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">New Health Factor</span>
+                <span className={`font-semibold ${newHealthFactor >= 2 ? 'text-green-400' : newHealthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                  {newHealthFactor > 999 ? '∞' : newHealthFactor.toFixed(2)}x
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Remaining Borrow</span>
+                <span className="text-white font-semibold">
+                  {newBorrowBalance.toFixed(2)} USDC
+                </span>
               </div>
             </div>
-
-            {repaySuccess ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-8"
-              >
-                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="h-10 w-10 text-green-400" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2 text-green-400">Repay Successful!</h3>
-                <p className="text-gray-400 mb-6">
-                  Your {amount} USDC has been repaid to Compound.
-                </p>
-                <Button
-                  onClick={() => {
-                    setRepaySuccess(false)
-                    setAmount("")
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Repay More USDC
-                </Button>
-              </motion.div>
-            ) : (
-              <>
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Amount to Repay
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        placeholder="0.0"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 h-12 text-lg pr-20"
-                        disabled={isLoading}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleMaxClick}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600/20 border-red-500/30 text-red-300 hover:bg-red-600/30"
-                        disabled={isLoading}
-                      >
-                        MAX
-                      </Button>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-400 mt-1">
-                      <span>Balance: {usdcBalance.toFixed(2)} USDC</span>
-                      <span>Borrowed: {borrowBalance.toFixed(2)} USDC</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-800/30 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingDown className="h-4 w-4 text-red-400" />
-                        <span className="text-sm text-gray-300">Borrow Rate</span>
-                      </div>
-                      <div className="text-lg font-semibold text-red-400">
-                        {borrowRate.toFixed(2)}%
-                      </div>
-                    </div>
-                    <div className="bg-gray-800/30 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Shield className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm text-gray-300">Collateral</span>
-                      </div>
-                      <div className="text-lg font-semibold text-blue-400">
-                        {collateralBalance.toFixed(4)} WETH
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-800/30 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <DollarSign className="h-4 w-4 text-yellow-400" />
-                      <span className="text-sm font-medium text-gray-300">Repay Summary</span>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Amount:</span>
-                        <span className="text-white">{amount || "0"} USDC</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Borrow Rate:</span>
-                        <span className="text-red-400">{borrowRate.toFixed(2)}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Remaining Borrow:</span>
-                        <span className="text-orange-400">
-                          {Math.max(0, borrowBalance - Number(amount || 0)).toFixed(2)} USDC
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleRepay}
-                  disabled={!amount || Number.parseFloat(amount) <= 0 || Number.parseFloat(amount) > Math.min(usdcBalance, borrowBalance) || isLoading}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white h-12 text-lg font-semibold mt-8"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      {buttonText}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <ArrowDownLeft className="h-5 w-5" />
-                      {buttonText}
-                      <ArrowRight className="h-4 w-4" />
-                    </div>
-                  )}
-                </Button>
-
-                {error && (
-                  <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-                    <div className="flex items-center gap-2 text-red-400">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm font-medium">Transaction Error</span>
-                    </div>
-                    <p className="text-red-300 text-sm mt-1">
-                      {error?.shortMessage || error?.reason || error?.message || "Transaction failed"}
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+            <Button 
+              onClick={() => window.location.href = "/dashboard"}
+              className="w-full bg-red-600 hover:bg-red-700 text-white h-12"
+            >
+              Go to Dashboard
+            </Button>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
+    )
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="p-4">
+        <Card className="bg-[#1a1d26] border-[#2a2d36] text-white text-center py-8">
+          <CardHeader>
+            <Image src="/usdc-icon.webp" alt="USDC" width={60} height={60} className="mx-auto mb-4" />
+            <CardTitle className="text-2xl">Connect Wallet to Repay</CardTitle>
+            <CardDescription className="text-gray-400">
+              Please connect your wallet to repay your USDC borrowings.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-4 space-y-4 pb-24">
+      {/* Current Position Card */}
+      <Card className="bg-gradient-to-r from-red-800/30 to-orange-800/30 border-red-500/20 text-white">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Image src="/usdc-icon.webp" alt="USDC" width={32} height={32} className="rounded-full" />
+              <div>
+                <p className="text-sm text-gray-300">Borrow Balance</p>
+                <p className="text-2xl font-bold">
+                  {borrowBalance.toFixed(2)} USDC
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-300">Borrow Rate</p>
+              <p className="text-xl font-bold text-red-400">
+                {borrowRate > 0 ? `${borrowRate.toFixed(2)}%` : 'Loading...'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between pt-4 border-t border-red-500/20">
+            <div className="flex items-center gap-3">
+              <Image src="/usdc-icon.webp" alt="USDC" width={24} height={24} className="rounded-full" />
+              <div>
+                <p className="text-sm text-gray-300">Wallet Balance</p>
+                <p className="text-lg font-bold">
+                  {usdcBalance.toFixed(2)} USDC
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-300">Health Factor</p>
+              <p className={`text-lg font-bold ${healthFactor >= 2 ? 'text-green-400' : healthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {healthFactor > 999 ? '∞' : healthFactor.toFixed(2)}x
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Repay Form */}
+      <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+        <CardHeader>
+          <CardTitle className="text-xl">Repay USDC</CardTitle>
+          <CardDescription className="text-gray-400">
+            Repay your USDC borrowings to reduce debt and improve health factor.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="amount" className="text-gray-300">Amount to Repay</Label>
+              <span className="text-sm text-gray-400">USDC only</span>
+            </div>
+            <div className="relative">
+              <Input
+                id="amount"
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="bg-[#252836] border-[#2a2d36] pr-20 h-14 text-lg"
+                disabled={isLoading}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <Image src="/usdc-icon.webp" alt="USDC" width={20} height={20} className="rounded-full" />
+                <span className="text-white font-semibold">USDC</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-red-400 hover:text-red-300"
+                  onClick={handleMaxClick}
+                  disabled={isLoading}
+                >
+                  MAX
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Repay Preview */}
+          <div className="bg-[#252836] p-4 rounded-lg space-y-3 border border-[#2a2d36]">
+            <div className="text-lg font-semibold text-white">Repay Overview</div>
+            <div className="flex justify-between text-sm text-gray-300">
+              <span>Interest Saved Annually</span>
+              <span className="font-medium text-green-400">
+                {interestSaved.toFixed(2)} USDC
+              </span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-300">
+              <span>USD Value</span>
+              <span className="font-medium text-white">
+                ${interestSaved.toFixed(2)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-300">
+              <span>New Health Factor</span>
+              <span className={`font-medium ${newHealthFactor >= 2 ? 'text-green-400' : newHealthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {newHealthFactor > 999 ? '∞' : newHealthFactor.toFixed(2)}x
+              </span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-300">
+              <span>Remaining Borrow</span>
+              <span className="font-medium text-orange-400">
+                {newBorrowBalance.toFixed(2)} USDC
+              </span>
+            </div>
+          </div>
+
+          <Button
+            className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white h-12 text-lg font-semibold"
+            onClick={handleRepay}
+            disabled={!isConnected || isLoading || !amount || Number.parseFloat(amount) <= 0 || Number.parseFloat(amount) > Math.min(usdcBalance, borrowBalance)}
+          >
+            {isLoading ? (
+              <div className="flex items-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                {buttonText}
+              </div>
+            ) : (
+              <>
+                <ArrowDownLeft className="mr-2 h-5 w-5" />
+                Repay USDC
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Benefits Section */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-white">Repay Benefits</h3>
+        <div className="grid grid-cols-1 gap-3">
+          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+            <CardContent className="p-4 flex items-center gap-3">
+              <TrendingDown className="h-6 w-6 text-green-400" />
+              <div>
+                <h4 className="font-semibold">Reduce Interest</h4>
+                <p className="text-sm text-gray-400">Stop paying {borrowRate.toFixed(2)}% APY on repaid amount.</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Shield className="h-6 w-6 text-blue-400" />
+              <div>
+                <h4 className="font-semibold">Improve Health Factor</h4>
+                <p className="text-sm text-gray-400">Repaying reduces debt and improves your health factor.</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Zap className="h-6 w-6 text-purple-400" />
+              <div>
+                <h4 className="font-semibold">Flexible Repayment</h4>
+                <p className="text-sm text-gray-400">Repay any amount, anytime to reduce your debt.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
