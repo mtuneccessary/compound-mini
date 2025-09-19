@@ -21,8 +21,8 @@ import { motion } from "framer-motion"
 import { publicClient, WETH_ADDRESS, COMET_ADDRESS } from "@/lib/comet-onchain"
 import erc20Abi from "@/lib/abis/erc20.json"
 import cometAbi from "@/lib/abis/comet.json"
-import { useSupplyWETH, useAllowance } from "@/lib/wagmi-hooks"
-import { formatUnits } from "viem"
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { parseUnits, formatUnits } from "viem"
 
 export function SupplyForm() {
   const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
@@ -35,11 +35,12 @@ export function SupplyForm() {
   const [mounted, setMounted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [supplySuccess, setSupplySuccess] = useState(false)
-  const [needsApproval, setNeedsApproval] = useState(false)
 
-  // Wagmi hooks
-  const { supplyWETH, supplyWETHAfterApproval, hash, error, isPending, isConfirming, isConfirmed } = useSupplyWETH()
-  const { data: allowance } = useAllowance(WETH_ADDRESS, COMET_ADDRESS, address || "0x0")
+  // Wagmi hooks for transactions
+  const { writeContract, data: hash, error, isPending } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  })
 
   useEffect(() => {
     setMounted(true)
@@ -52,40 +53,6 @@ export function SupplyForm() {
       loadSupplyApy()
     }
   }, [isConnected, address])
-
-  // Handle transaction states
-  useEffect(() => {
-    if (isPending) {
-      showLoading(needsApproval ? "Approving WETH..." : "Supplying WETH...")
-    } else if (isConfirming) {
-      showLoading("Confirming transaction...")
-    } else if (isConfirmed) {
-      if (needsApproval) {
-        setNeedsApproval(false)
-        hideLoading()
-        showSuccess("Approval successful", "WETH approved for Compound Mini.")
-        // Automatically proceed to supply
-        setTimeout(() => {
-          supplyWETHAfterApproval(amount)
-        }, 1000)
-      } else {
-        hideLoading()
-        showSuccess("Supply successful", `${amount} WETH supplied to Compound Mini.`)
-        setSupplySuccess(true)
-        // Refresh balances
-        Promise.all([loadWethBalance(), loadCollateral()])
-        // Notify other parts of the app
-        try {
-          const evt = new Event('onchain:updated')
-          window.dispatchEvent(evt)
-        } catch {}
-      }
-    } else if (error) {
-      hideLoading()
-      const msg = error?.shortMessage || error?.message || "Transaction failed"
-      showError("Transaction Failed", msg)
-    }
-  }, [isPending, isConfirming, isConfirmed, error, needsApproval, amount])
 
   const loadWethBalance = async () => {
     try {
@@ -174,78 +141,97 @@ export function SupplyForm() {
       return
     }
 
-    if (!address) {
-      showError("Wallet Error", "Please connect your wallet")
-      return
-    }
+    try {
+      setIsSubmitting(true)
+      showLoading(`Supplying ${amount} WETH...`)
 
-    setIsSubmitting(true)
-    
-    // Check if approval is needed
-    const requiredAmount = BigInt(parseFloat(amount) * 1e18)
-    if (!allowance || allowance < requiredAmount) {
-      setNeedsApproval(true)
-      supplyWETH(amount, address)
-    } else {
-      supplyWETHAfterApproval(amount)
+      const rawAmount = parseUnits(amount, 18)
+
+      // First approve WETH
+      writeContract({
+        address: WETH_ADDRESS,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [COMET_ADDRESS, rawAmount],
+      })
+    } catch (error: any) {
+      hideLoading()
+      const msg = error?.shortMessage || error?.reason || error?.message || "Transaction failed"
+      showError("Supply Failed", msg)
+      setIsSubmitting(false)
     }
   }
 
-  const formatCurrency = (value: number, symbol: string) => {
-    return `${value.toFixed(4)} ${symbol}`
-  }
+  // Handle transaction confirmation
+  useEffect(() => {
+    if (isConfirmed && hash) {
+      // Transaction confirmed, now execute the supply
+      const rawAmount = parseUnits(amount, 18)
+      writeContract({
+        address: COMET_ADDRESS,
+        abi: cometAbi,
+        functionName: "supply",
+        args: [WETH_ADDRESS, rawAmount],
+      })
+    }
+  }, [isConfirmed, hash])
 
-  const projectedEarnings = Number(amount) * (supplyApy / 100)
-  const newCollateralBalance = collateralBalance + Number(amount)
-  const newHealthFactor = newCollateralBalance > 0 && Number(amount) > 0 ? (newCollateralBalance * 3000 * 0.85) / 0 : 999
+  // Handle supply confirmation
+  useEffect(() => {
+    if (isConfirmed && hash && isSubmitting) {
+      // Supply transaction confirmed
+      hideLoading()
+      setSupplySuccess(true)
+      setIsSubmitting(false)
+      
+      // Refresh balances
+      Promise.all([loadWethBalance(), loadCollateral()])
+      
+      // Notify other parts of the app
+      try {
+        const evt = new Event('onchain:updated')
+        window.dispatchEvent(evt)
+      } catch {}
+    }
+  }, [isConfirmed, hash, isSubmitting])
 
-  // Success state
+  // Handle errors
+  useEffect(() => {
+    if (error) {
+      hideLoading()
+      const msg = error?.shortMessage || error?.message || "Transaction failed"
+      showError("Transaction Failed", msg)
+      setIsSubmitting(false)
+    }
+  }, [error])
+
   if (supplySuccess) {
     return (
       <div className="p-4 pb-24">
-        <Card className="bg-gradient-to-br from-green-900/20 to-blue-900/20 border-green-500/20 text-white">
+        <Card className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-green-500/20 text-white">
           <CardContent className="p-8 text-center">
             <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="h-12 w-12 text-green-400" />
+              <CheckCircle className="h-10 w-10 text-green-400" />
             </div>
-            <h2 className="text-3xl font-bold text-green-400 mb-3">Supply Successful!</h2>
-            <p className="text-xl text-white mb-2">
-              You have supplied <span className="font-bold text-green-400">{amount} WETH</span>
-            </p>
+            <h2 className="text-2xl font-semibold mb-3">Supply Successful!</h2>
             <p className="text-gray-400 mb-6">
-              Earning {supplyApy.toFixed(2)}% APY
+              You've successfully supplied {amount} WETH to Compound.
             </p>
-            <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4 mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">Projected Annual Earnings</span>
-                <span className="text-green-400 font-semibold">
-                  ${projectedEarnings.toFixed(2)}
-                </span>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-3 bg-green-500/10 rounded-lg">
+                <span className="text-green-400">Supplied Amount</span>
+                <span className="font-semibold">{amount} WETH</span>
               </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">New Collateral Balance</span>
-                <span className="text-white font-semibold">
-                  {formatCurrency(newCollateralBalance, "WETH")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Health Factor</span>
-                <span className="text-green-400 font-semibold">
-                  {newHealthFactor > 999 ? '∞' : newHealthFactor.toFixed(2)}x
-                </span>
+              <div className="flex justify-between items-center p-3 bg-green-500/10 rounded-lg">
+                <span className="text-green-400">Current APY</span>
+                <span className="font-semibold">{supplyApy.toFixed(2)}%</span>
               </div>
             </div>
             <Button 
-              onClick={() => {
-                setSupplySuccess(false)
-                setAmount("")
-                loadWethBalance()
-                loadCollateral()
-              }}
+              onClick={() => setSupplySuccess(false)}
               size="lg" 
-              className="w-full bg-green-600 hover:bg-green-700 text-white h-12"
+              className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white h-12"
             >
-              <ArrowRight className="h-5 w-5 mr-2" />
               Supply More WETH
             </Button>
           </CardContent>
@@ -258,33 +244,48 @@ export function SupplyForm() {
     <div className="p-4 pb-24">
       <Card className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border-blue-500/20 text-white">
         <CardContent className="p-8">
-          <div className="flex items-center mb-6">
-            <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mr-4">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
               <PiggyBank className="h-6 w-6 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-semibold">Supply WETH</h2>
-              <p className="text-gray-400">Earn interest on your WETH</p>
+              <h2 className="text-xl font-semibold">Supply WETH</h2>
+              <p className="text-gray-400 text-sm">Earn interest on your WETH</p>
             </div>
           </div>
 
           <div className="space-y-6">
-            {/* Balance Display */}
-            <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">Wallet Balance</span>
-                <span className="text-white font-semibold">
-                  {formatCurrency(wethBalance, "WETH")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">Currently Supplied</span>
-                <span className="text-blue-400 font-semibold">
-                  {formatCurrency(collateralBalance, "WETH")}
-                </span>
-              </div>
+            <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">Supply APY</span>
+                <span className="text-gray-300">Available Balance</span>
+                <div className="flex items-center gap-2">
+                  <Image 
+                    src="/weth-icon.png" 
+                    alt="WETH" 
+                    width={16} 
+                    height={16} 
+                    className="rounded-full"
+                  />
+                  <span className="font-semibold">{wethBalance.toFixed(4)} WETH</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Currently Supplied</span>
+                <div className="flex items-center gap-2">
+                  <Image 
+                    src="/weth-icon.png" 
+                    alt="WETH" 
+                    width={16} 
+                    height={16} 
+                    className="rounded-full"
+                  />
+                  <span className="font-semibold">{collateralBalance.toFixed(4)} WETH</span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Supply APY</span>
                 <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">
                   <TrendingUp className="h-3 w-3 mr-1" />
                   {supplyApy.toFixed(2)}%
@@ -292,16 +293,15 @@ export function SupplyForm() {
               </div>
             </div>
 
-            {/* Amount Input */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="text-sm font-medium text-gray-300">Amount to Supply</label>
               <div className="relative">
                 <Input
                   type="number"
-                  placeholder="0.00"
+                  placeholder="0.0"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="bg-[#1a1d26] border-[#2a2d36] text-white placeholder-gray-500 h-12 pr-20"
+                  className="bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 pr-20 h-12"
                   disabled={isSubmitting || isPending || isConfirming}
                 />
                 <Button
@@ -309,7 +309,7 @@ export function SupplyForm() {
                   variant="outline"
                   size="sm"
                   onClick={handleMaxClick}
-                  className="absolute right-2 top-2 bg-blue-600/20 border-blue-500/30 text-blue-400 hover:bg-blue-600/30"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 border-blue-500/30 text-blue-400 hover:bg-blue-500/30"
                   disabled={isSubmitting || isPending || isConfirming}
                 >
                   MAX
@@ -317,64 +317,46 @@ export function SupplyForm() {
               </div>
             </div>
 
-            {/* Projection */}
-            {amount && Number.parseFloat(amount) > 0 && (
-              <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-300 mb-3">Supply Preview</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Annual Earnings</span>
-                    <span className="text-green-400 font-semibold">
-                      ${projectedEarnings.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">New Total Supplied</span>
-                    <span className="text-white font-semibold">
-                      {formatCurrency(collateralBalance + Number(amount), "WETH")}
-                    </span>
-                  </div>
-                </div>
+            <div className="space-y-3">
+              <Button
+                onClick={handleSupply}
+                disabled={
+                  !amount || 
+                  Number.parseFloat(amount) <= 0 || 
+                  Number.parseFloat(amount) > wethBalance ||
+                  isSubmitting || 
+                  isPending || 
+                  isConfirming ||
+                  !isConnected
+                }
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg"
+              >
+                {isSubmitting || isPending || isConfirming ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
+                    />
+                    {isSubmitting ? "Supplying..." : isPending ? "Confirming..." : "Processing..."}
+                  </>
+                ) : (
+                  <>
+                    <PiggyBank className="h-5 w-5 mr-2" />
+                    Supply WETH
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-2 text-sm text-gray-400">
+              <div className="flex justify-between">
+                <span>Transaction Fee</span>
+                <span>~$2-5</span>
               </div>
-            )}
-
-            {/* Action Button */}
-            <Button
-              onClick={handleSupply}
-              disabled={
-                !amount || 
-                Number.parseFloat(amount) <= 0 || 
-                Number.parseFloat(amount) > wethBalance ||
-                isSubmitting || 
-                isPending || 
-                isConfirming
-              }
-              size="lg"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12"
-            >
-              {isSubmitting || isPending || isConfirming ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {needsApproval ? "Approving..." : "Supplying..."}
-                </>
-              ) : (
-                <>
-                  <PiggyBank className="h-5 w-5 mr-2" />
-                  Supply WETH
-                </>
-              )}
-            </Button>
-
-            {/* Safety Notice */}
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
-              <div className="flex items-start">
-                <Shield className="h-5 w-5 text-yellow-400 mr-3 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-medium text-yellow-400 mb-1">Safety Notice</h4>
-                  <p className="text-xs text-gray-400">
-                    Supplying assets to Compound involves smart contract risk. Your funds are secured by Compound's battle-tested protocol.
-                  </p>
-                </div>
+              <div className="flex justify-between">
+                <span>Estimated Gas</span>
+                <span>~150,000</span>
               </div>
             </div>
           </div>
