@@ -1,7 +1,7 @@
 // Network configuration for Compound Mini
 // Supports both local mainnet fork and Sepolia testnet
 
-export type NetworkType = 'local' | 'sepolia'
+export type NetworkType = 'local' | 'sepolia' | 'custom'
 
 export interface NetworkConfig {
   name: string
@@ -40,6 +40,19 @@ export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
     chainlinkEthUsdFeed: '0x694AA1769357215DE4FAC081bf1f309aDC325306', // Sepolia ETH/USD
     isTestnet: true,
     description: 'Ethereum Sepolia testnet for testing'
+  },
+  custom: {
+    name: 'Custom (Mainnet fork/RPC)',
+    chainId: 1,
+    // Prefer NEXT_PUBLIC_ env on the client, fallback to server env, else publicnode
+    rpcUrl: (process.env.NEXT_PUBLIC_ETH_RPC_URL || process.env.ETH_RPC_URL || 'https://ethereum.publicnode.com') as string,
+    explorerUrl: 'https://etherscan.io',
+    cometAddress: '0xc3d688b66703497daa19211eedff47f25384cdc3', // Mainnet Comet v3
+    wethAddress: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', // Mainnet WETH
+    usdcAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // Mainnet USDC
+    chainlinkEthUsdFeed: '0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419', // Mainnet ETH/USD
+    isTestnet: false,
+    description: 'Custom RPC (e.g., Tenderly Fork)'
   }
 }
 
@@ -51,7 +64,14 @@ export function getCurrentNetwork(): NetworkType {
 
 // Get current network configuration
 export function getCurrentNetworkConfig(): NetworkConfig {
-  return NETWORK_CONFIGS[getCurrentNetwork()]
+  const net = getCurrentNetwork()
+  const base = NETWORK_CONFIGS[net]
+  // For custom, refresh rpcUrl from env on access
+  if (net === 'custom') {
+    const envRpc = (process.env.NEXT_PUBLIC_ETH_RPC_URL || process.env.ETH_RPC_URL) as string | undefined
+    return { ...base, rpcUrl: envRpc || base.rpcUrl }
+  }
+  return base
 }
 
 // Environment variable names for each network
@@ -64,6 +84,9 @@ export const NETWORK_ENV_VARS = {
     RPC_URL: 'SEPOLIA_RPC_URL',
     INFURA_KEY: 'NEXT_PUBLIC_INFURA_KEY',
     ALCHEMY_KEY: 'NEXT_PUBLIC_ALCHEMY_KEY'
+  },
+  custom: {
+    RPC_URL: 'ETH_RPC_URL'
   }
 }
 
@@ -88,6 +111,10 @@ export function getRpcUrl(): string {
     
     // Fallback to public RPC (rate limited)
     return 'https://sepolia.publicnode.com'
+  }
+
+  if (network === 'custom') {
+    return (process.env.NEXT_PUBLIC_ETH_RPC_URL || process.env.ETH_RPC_URL || config.rpcUrl) as string
   }
   
   return config.rpcUrl

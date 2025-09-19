@@ -1,7 +1,7 @@
 import "dotenv/config"
 import { HardhatUserConfig } from "hardhat/config"
 
-const ETH_RPC_URL = process.env.ETH_RPC_URL || "https://eth-mainnet.g.alchemy.com/v2/demo"
+const ETH_RPC_URL = process.env.ETH_RPC_URL || "https://ethereum.publicnode.com"
 const FORK_BLOCK = process.env.FORK_BLOCK ? Number(process.env.FORK_BLOCK) : undefined
 
 const config: HardhatUserConfig = {
@@ -13,14 +13,13 @@ const config: HardhatUserConfig = {
 	},
 	networks: {
 		hardhat: {
-			type: "edr-simulated",
+			type: "http",
+			url: "http://127.0.0.1:8545",
 			chainId: 31337,
-			forking: ETH_RPC_URL
-				? {
-					url: ETH_RPC_URL,
-					blockNumber: FORK_BLOCK,
-				}
-				: undefined,
+			forking: {
+				url: ETH_RPC_URL,
+				blockNumber: FORK_BLOCK,
+			},
 		},
 		localhost: {
 			type: "http",

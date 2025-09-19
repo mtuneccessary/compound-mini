@@ -18,6 +18,9 @@ import { useFeedback } from "@/lib/feedback-provider"
 import { useAccount } from "wagmi"
 import Image from "next/image"
 import { motion } from "framer-motion"
+import { publicClient, WETH_ADDRESS, COMET_ADDRESS } from "@/lib/comet-onchain"
+import erc20Abi from "@/lib/abis/erc20.json"
+import cometAbi from "@/lib/abis/comet.json"
 
 export function SupplyForm() {
   const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
@@ -25,6 +28,7 @@ export function SupplyForm() {
 
   const [amount, setAmount] = useState("")
   const [wethBalance, setWethBalance] = useState(0)
+  const [collateralBalance, setCollateralBalance] = useState(0)
   const [supplyApy, setSupplyApy] = useState(0)
   const [mounted, setMounted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -37,23 +41,20 @@ export function SupplyForm() {
   useEffect(() => {
     if (isConnected && address) {
       loadWethBalance()
+      loadCollateral()
       loadSupplyApy()
     }
   }, [isConnected, address])
 
   const loadWethBalance = async () => {
     try {
-      const { ethers } = await import("ethers")
-      if (!(window as any).ethereum) return
-      
-      const provider = new ethers.BrowserProvider((window as any).ethereum)
-      const wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-      const wethAbi = [
-        "function balanceOf(address owner) view returns (uint256)"
-      ]
-      
-      const weth = new ethers.Contract(wethAddress, wethAbi, provider)
-      const balance = await weth.balanceOf(address)
+      if (!address) return
+      const balance = (await publicClient.readContract({
+        address: WETH_ADDRESS as `0x${string}`,
+        abi: erc20Abi as any,
+        functionName: "balanceOf",
+        args: [address as `0x${string}`],
+      })) as bigint
       setWethBalance(Number(balance) / 1e18)
     } catch (error) {
       console.error("Error loading WETH balance:", error)
@@ -61,23 +62,36 @@ export function SupplyForm() {
     }
   }
 
+  const loadCollateral = async () => {
+    try {
+      if (!address) return
+      const collateral = (await publicClient.readContract({
+        address: COMET_ADDRESS as `0x${string}`,
+        abi: cometAbi as any,
+        functionName: "collateralBalanceOf",
+        args: [address as `0x${string}`, WETH_ADDRESS as `0x${string}`],
+      })) as bigint
+      setCollateralBalance(Number(collateral) / 1e18)
+    } catch (error) {
+      console.error("Error loading collateral:", error)
+      setCollateralBalance(0)
+    }
+  }
+
   const loadSupplyApy = async () => {
     try {
-      const { ethers } = await import("ethers")
-      if (!(window as any).ethereum) return
-      
-      const provider = new ethers.BrowserProvider((window as any).ethereum)
-      const cometAddress = "0xc3d688B66703497DAA19211EEdff47f25384cdc3"
-      const cometAbi = [
-        "function getUtilization() view returns (uint256)",
-        "function getSupplyRate(uint256 utilization) view returns (uint256)"
-      ]
-      
-      const comet = new ethers.Contract(cometAddress, cometAbi, provider)
-      const utilization = await comet.getUtilization()
-      const supplyRate = await comet.getSupplyRate(utilization)
-      
-      // Convert per-second rate to annual percentage
+      const utilization = (await publicClient.readContract({
+        address: COMET_ADDRESS as `0x${string}`,
+        abi: cometAbi as any,
+        functionName: "getUtilization",
+        args: [],
+      })) as bigint
+      const supplyRate = (await publicClient.readContract({
+        address: COMET_ADDRESS as `0x${string}`,
+        abi: cometAbi as any,
+        functionName: "getSupplyRate",
+        args: [utilization],
+      })) as bigint
       const secondsPerYear = 31536000
       const apy = (Number(supplyRate) / 1e18) * secondsPerYear * 100
       setSupplyApy(apy)
@@ -168,6 +182,15 @@ export function SupplyForm() {
       showLoading("Supplying WETH...")
       await (await comet.supply(wethAddress, rawAmount)).wait()
 
+      // Refresh balances so UI reflects immediately
+      await Promise.all([loadWethBalance(), loadCollateral()])
+
+      // Notify other parts of the app to refetch on-chain state
+      try {
+        const evt = new Event('onchain:updated')
+        window.dispatchEvent(evt)
+      } catch {}
+
       hideLoading()
       setSupplySuccess(true)
     } catch (error: any) {
@@ -199,16 +222,12 @@ export function SupplyForm() {
             </p>
             <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4 mb-6">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">Projected Annual Earnings</span>
-                <span className="text-green-400 font-semibold">
-                  {projectedEarnings.toFixed(4)} WETH
-                </span>
+                <span className="text-gray-400">Currently Supplied (Collateral)</span>
+                <span className="text-green-400 font-semibold">{collateralBalance.toFixed(4)} WETH</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">USD Value</span>
-                <span className="text-white font-semibold">
-                  ${(projectedEarnings * 3000).toFixed(2)}
-                </span>
+                <span className="text-gray-400">Projected Annual Earnings</span>
+                <span className="text-white font-semibold">{projectedEarnings.toFixed(4)} WETH</span>
               </div>
             </div>
             <Button 
@@ -245,17 +264,19 @@ export function SupplyForm() {
                 />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">WETH Balance</h3>
-                <p className="text-sm text-gray-400">Available to supply</p>
+                <h3 className="font-semibold text-lg">WETH</h3>
+                <p className="text-sm text-gray-400">Wallet balance and supplied</p>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-right space-y-1">
               <div className="text-2xl font-bold text-green-400">
-                {wethBalance.toFixed(4)}
+                {wethBalance.toFixed(4)} WETH
               </div>
-              <div className="text-sm text-gray-400">
-                ${(wethBalance * 3000).toFixed(2)}
+              <div className="text-sm text-gray-400">Wallet</div>
+              <div className="text-lg font-semibold text-blue-300">
+                {collateralBalance.toFixed(4)} WETH
               </div>
+              <div className="text-sm text-gray-400">Supplied</div>
             </div>
           </div>
         </CardContent>
@@ -347,7 +368,7 @@ export function SupplyForm() {
           <Button
             className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white h-14 text-lg font-semibold"
             onClick={handleSupply}
-            disabled={!amount || Number.parseFloat(amount) <= 0 || Number.parseFloat(amount) > wethBalance || isSubmitting}
+            disabled={!isConnected || !amount || Number.parseFloat(amount) <= 0 || Number.parseFloat(amount) > wethBalance || isSubmitting}
           >
             {isSubmitting ? (
               <div className="flex items-center">

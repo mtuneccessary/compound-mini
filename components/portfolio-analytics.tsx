@@ -106,12 +106,14 @@ export function PortfolioAnalytics() {
         publicClient.readContract({
           address: COMET_ADDRESS,
           abi: cometAbi as any,
-          functionName: "totalBorrow"
+          functionName: "totalBorrow",
+          args: []
         }) as Promise<bigint>,
         publicClient.readContract({
           address: COMET_ADDRESS,
           abi: cometAbi as any,
-          functionName: "totalSupply"
+          functionName: "totalSupply",
+          args: []
         }) as Promise<bigint>
       ])
 
@@ -356,18 +358,18 @@ export function PortfolioAnalytics() {
   }
 
   return (
-    <Card className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-0 shadow-xl">
-      <CardHeader className="pb-4 bg-bg-secondary text-text-primary rounded-t-lg">
+    <Card className="w-full bg-bg-secondary border border-border-primary text-text-primary shadow-xl">
+      <CardHeader className="pb-3 bg-bg-secondary text-text-primary rounded-t-lg">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-bg-tertiary rounded-full">
               <PieChart className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold">Portfolio Analytics</span>
+            <span className="text-lg font-semibold">Portfolio</span>
           </div>
           <Badge
             variant={getRiskBadgeVariant(portfolioData.riskLevel)}
-            className={`text-xs px-3 py-1 font-semibold ${
+            className={`text-xs px-2.5 py-0.5 font-medium ${
               portfolioData.riskLevel === 'safe'
                 ? 'bg-compound-success-900/20 text-compound-success-100 border-compound-success-700/30'
                 : portfolioData.riskLevel === 'warning'
@@ -379,106 +381,81 @@ export function PortfolioAnalytics() {
             <span className="ml-1 capitalize">{portfolioData.riskLevel}</span>
           </Badge>
         </CardTitle>
-        <p className="text-compound-primary-100 text-sm opacity-90">
-          Real-time portfolio insights and risk monitoring
-        </p>
+        <p className="text-text-secondary text-xs">Live positions and risk</p>
       </CardHeader>
 
-      <CardContent className="p-6 space-y-6">
+      <CardContent className="p-4 space-y-4 bg-bg-secondary">
         {/* Health Factor - Enhanced */}
-        <div className="bg-gradient-to-r from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 p-6 rounded-xl border border-slate-200 dark:border-slate-600">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-bg-tertiary/60 p-4 rounded-lg border border-border-primary">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-compound-success-100 dark:bg-compound-success-900/20 rounded-full">
+              <div className="p-2 bg-bg-tertiary rounded-full">
                 <Shield className="h-5 w-5 text-compound-success-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-text-primary">Health Factor</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300">Portfolio safety score</p>
+                <h3 className="text-sm font-medium text-text-primary">Health</h3>
+                <p className="text-xs text-text-secondary">Safety</p>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-3xl font-bold text-text-primary">
+            <div className="text-right leading-tight">
+              <span className="text-2xl font-semibold text-text-primary">
                 {portfolioData.healthFactor === Infinity ? '∞' : portfolioData.healthFactor.toFixed(2)}
               </span>
-              <p className="text-sm text-slate-600 dark:text-slate-300">Score</p>
+              <p className="text-xs text-text-secondary">score</p>
             </div>
           </div>
-          <div className="space-y-3">
-            <Progress
-              value={Math.min(100, (portfolioData.healthFactor / 3) * 100)}
-              className="h-3 bg-slate-200 dark:bg-slate-600"
-            />
-            <div className="flex justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span className="text-slate-600 dark:text-slate-300">1.0 (Liquidation)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-slate-600 dark:text-slate-300">2.0 (Warning)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-compound-success-500 rounded-full"></div>
-                <span className="text-slate-600 dark:text-slate-300">3.0 (Safe)</span>
-              </div>
-            </div>
-          </div>
+          <Progress value={Math.min(100, (portfolioData.healthFactor / 3) * 100)} className="h-2 bg-bg-tertiary" />
         </div>
 
         {/* Position Overview - Enhanced Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl border border-green-200 dark:border-green-700">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-compound-success-900/20 rounded-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-bg-tertiary/60 p-4 rounded-lg border border-border-primary">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 bg-bg-tertiary rounded-full">
                 <DollarSign className="h-6 w-6 text-compound-success-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-text-primary">Total Collateral</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300">WETH backing your position</p>
+                <h3 className="text-sm font-medium text-text-primary">Collateral</h3>
+                <p className="text-xs text-text-secondary">WETH value</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-3xl font-bold text-text-primary">
-                ${portfolioData.totalCollateralValue.toFixed(2)}
-              </p>
-              <p className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                <span className="font-medium">{portfolioData.wethCollateralAmount.toFixed(4)} WETH</span>
-                <span>@</span>
-                <span className="font-medium">${portfolioData.wethPrice.toFixed(2)}</span>
-              </p>
+            <div className="space-y-1">
+              <p className="text-2xl font-semibold text-text-primary">${portfolioData.totalCollateralValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+              <div className="flex items-center justify-between text-xs">
+                <p className="text-text-secondary whitespace-normal break-words">{portfolioData.wethCollateralAmount.toFixed(4)} WETH</p>
+                <p className="text-text-tertiary whitespace-normal break-words">${portfolioData.wethPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}/WETH</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 p-6 rounded-xl border border-red-200 dark:border-red-700">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-red-100 dark:bg-red-800/50 rounded-full">
+          <div className="bg-bg-tertiary/60 p-4 rounded-lg border border-border-primary">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 bg-bg-tertiary rounded-full">
                 <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-text-primary">Total Borrowed</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300">USDC debt to repay</p>
+                <h3 className="text-sm font-medium text-text-primary">Borrowed</h3>
+                <p className="text-xs text-text-secondary">USDC debt</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-3xl font-bold text-text-primary">
-                ${portfolioData.totalBorrowedValue.toFixed(2)}
-              </p>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                <span className="font-medium">{portfolioData.usdcBorrowedAmount.toFixed(2)} USDC</span>
-              </p>
+            <div className="space-y-1">
+              <p className="text-2xl font-semibold text-text-primary">${portfolioData.totalBorrowedValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+              <div className="flex items-center justify-between text-xs">
+                <p className="text-text-secondary whitespace-normal break-words">{portfolioData.usdcBorrowedAmount.toFixed(2)} USDC</p>
+                <span className="text-text-tertiary" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Net Position - Enhanced */}
-        <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-900/20 dark:via-purple-900/20 dark:to-pink-900/20 p-6 rounded-xl border border-indigo-200 dark:border-indigo-700">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-bg-tertiary/60 p-4 rounded-lg border border-border-primary">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <div className={`p-3 rounded-full ${
                 portfolioData.netPositionValue >= 0
                   ? 'bg-compound-success-900/20'
-                  : 'bg-red-100 dark:bg-red-800/50'
+                  : 'bg-bg-tertiary'
               }`}>
                 {portfolioData.netPositionValue >= 0 ? (
                   <TrendingUp className="h-6 w-6 text-compound-success-400" />
@@ -487,138 +464,117 @@ export function PortfolioAnalytics() {
                 )}
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-text-primary">Net Position Value</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300">Equity in your position</p>
+                <h3 className="text-sm font-medium text-text-primary">Net</h3>
+                <p className="text-xs text-text-secondary">Equity</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className={`text-3xl font-bold ${
+            <div className="text-right leading-tight">
+              <p className={`text-2xl font-semibold ${
                 portfolioData.netPositionValue >= 0
                   ? 'text-compound-success-400'
                   : 'text-red-600 dark:text-red-400'
               }`}>
-                ${Math.abs(portfolioData.netPositionValue).toFixed(2)}
+                ${Math.abs(portfolioData.netPositionValue).toLocaleString(undefined, { maximumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
+              <p className="text-xs text-text-secondary">
                 {portfolioData.netPositionValue >= 0 ? 'Positive equity' : 'Negative equity'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+            <div className="flex-1 h-2 bg-bg-tertiary rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${
                   portfolioData.netPositionValue >= 0
                     ? 'bg-gradient-to-r from-green-400 to-green-600'
                     : 'bg-gradient-to-r from-red-400 to-red-600'
                 }`}
-                style={{
-                  width: `${Math.min(100, Math.abs(portfolioData.netPositionValue) / portfolioData.totalCollateralValue * 100)}%`
-                }}
+                style={{ width: `${Math.min(100, portfolioData.totalCollateralValue > 0 ? Math.abs(portfolioData.netPositionValue) / portfolioData.totalCollateralValue * 100 : 0)}%` }}
               />
             </div>
           </div>
         </div>
 
         {/* Risk Metrics - Enhanced */}
-        <div className="space-y-4">
-          <h4 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Risk Metrics
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl border border-amber-200 dark:border-amber-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-amber-100 dark:bg-amber-800/50 rounded-full">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-text-primary">Liquidation Price</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">Danger zone threshold</p>
-                </div>
+        <h4 className="text-sm font-medium text-text-primary flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-amber-500" />
+          Risk
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-bg-tertiary/60 p-4 rounded-lg border border-border-primary">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 bg-bg-tertiary rounded-full">
+                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-text-primary">
-                  ${portfolioData.liquidationPrice.toFixed(2)}
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Current WETH: <span className="font-medium">${portfolioData.wethPrice.toFixed(2)}</span>
-                </p>
+              <div>
+                <h3 className="text-sm font-medium text-text-primary">Liq. Price</h3>
+                <p className="text-xs text-text-secondary">Threshold</p>
               </div>
             </div>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl font-semibold text-text-primary">${portfolioData.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+              <p className="text-xs text-text-secondary text-right">WETH ${portfolioData.wethPrice.toFixed(2)}</p>
+            </div>
+          </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-800/50 rounded-full">
-                  <PieChart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-text-primary">Collateral Ratio</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">Safety multiplier</p>
-                </div>
+          <div className="bg-bg-tertiary/60 p-4 rounded-lg border border-border-primary">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 bg-bg-tertiary rounded-full">
+                <PieChart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="space-y-2">
-                <p className="text-2xl font-bold text-text-primary">
-                  {portfolioData.collateralRatio.toFixed(2)}x
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Required: <span className="font-medium">{portfolioData.liquidationThreshold.toFixed(2)}x</span>
-                </p>
+              <div>
+                <h3 className="text-sm font-medium text-text-primary">Collateral Ratio</h3>
+                <p className="text-xs text-text-secondary">Safety</p>
               </div>
+            </div>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl font-semibold text-text-primary">{portfolioData.collateralRatio.toFixed(2)}x</p>
+              <p className="text-xs text-text-secondary text-right">Req. {portfolioData.liquidationThreshold.toFixed(2)}x</p>
             </div>
           </div>
         </div>
 
         {/* Borrowing Capacity - Enhanced */}
-        <div className="bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800 dark:to-slate-700 p-6 rounded-xl border border-slate-200 dark:border-slate-600">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-bg-tertiary/60 p-4 rounded-lg border border-border-primary">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-slate-100 dark:bg-slate-600 rounded-full">
+              <div className="p-3 bg-bg-tertiary rounded-full">
                 <DollarSign className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-text-primary">Borrowing Capacity</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300">Available to borrow</p>
+                <h3 className="text-sm font-medium text-text-primary">Capacity</h3>
+                <p className="text-xs text-text-secondary">Available</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xl font-bold text-text-primary">
-                ${portfolioData.currentBorrowCapacity.toFixed(2)}
-              </p>
-              <p className="text-sm text-slate-600 dark:text-slate-300">available</p>
+              <p className="text-xl font-semibold text-text-primary">${portfolioData.currentBorrowCapacity.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+              <p className="text-xs text-text-secondary">now</p>
             </div>
           </div>
-          <div className="space-y-3">
-            <Progress
-              value={(portfolioData.totalBorrowedValue / portfolioData.maxBorrowCapacity) * 100}
-              className="h-4 bg-slate-200 dark:bg-slate-600"
-            />
-            <div className="flex justify-between text-sm text-slate-600 dark:text-slate-300">
-              <span className="font-medium">${portfolioData.totalBorrowedValue.toFixed(2)} used</span>
-              <span className="font-medium">${portfolioData.maxBorrowCapacity.toFixed(2)} max</span>
-            </div>
+          <Progress value={(portfolioData.totalBorrowedValue / portfolioData.maxBorrowCapacity) * 100} className="h-2 bg-bg-tertiary" />
+          <div className="flex justify-between text-xs text-text-secondary">
+            <span>${portfolioData.totalBorrowedValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} used</span>
+            <span>${portfolioData.maxBorrowCapacity.toLocaleString(undefined, { maximumFractionDigits: 2 })} max</span>
           </div>
         </div>
 
         {/* Supply Position - Enhanced */}
         {portfolioData.usdcSuppliedAmount > 0 && (
-          <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-700">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-800/50 rounded-full">
+          <div className="bg-bg-tertiary/60 p-4 rounded-lg border border-border-primary">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 bg-bg-tertiary rounded-full">
                 <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-text-primary">USDC Supply Position</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300">Earning yield on supplied assets</p>
+                <h3 className="text-sm font-medium text-text-primary">USDC Supply</h3>
+                <p className="text-xs text-text-secondary">Earning yield</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-3xl font-bold text-text-primary">
-                ${portfolioData.usdcSuppliedAmount.toFixed(2)}
-              </p>
-              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <div className="flex items-end justify-between">
+              <p className="text-2xl font-semibold text-text-primary">${portfolioData.usdcSuppliedAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+              <div className="flex items-center gap-2 text-xs text-text-secondary">
                 <div className="w-2 h-2 bg-compound-success-500 rounded-full animate-pulse"></div>
-                <span>Earning supply interest</span>
+                <span>yielding</span>
               </div>
             </div>
           </div>

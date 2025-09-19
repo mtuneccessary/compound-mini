@@ -3,7 +3,7 @@
 import { ReactNode, useEffect } from "react"
 import { WagmiProvider, createConfig, http } from "wagmi"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { injected, metaMask } from "wagmi/connectors"
+import { injected, metaMask, walletConnect } from "wagmi/connectors"
 import { hardhat, sepolia } from "viem/chains"
 import { getCurrentNetworkConfig, getRpcUrl } from "./network-config"
 
@@ -12,10 +12,10 @@ const networkConfig = getCurrentNetworkConfig()
 const rpcUrl = getRpcUrl()
 
 // Create chain configuration based on current network
-const chain = networkConfig.chainId === 31337 
-  ? hardhat 
-  : networkConfig.chainId === 11155111 
-    ? sepolia 
+const chain = networkConfig.chainId === 31337
+  ? hardhat
+  : networkConfig.chainId === 11155111
+    ? sepolia
     : {
         id: networkConfig.chainId,
         name: networkConfig.name,
@@ -29,16 +29,43 @@ const chain = networkConfig.chainId === 31337
         }
       } as const
 
+const wcProjectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID
+
+// Get the current origin for WalletConnect metadata
+const getCurrentOrigin = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  return process.env.NEXT_PUBLIC_PUBLIC_BASE_URL || 'http://localhost:3002'
+}
+
+const connectorsList = [
+	// Prefer generic injected (Rabby, etc.) first, then MetaMask
+	injected({ shimDisconnect: true }),
+	metaMask(),
+	// WalletConnect (only if projectId provided)
+	...(wcProjectId
+		? [
+			walletConnect({
+				projectId: wcProjectId,
+				showQrModal: true,
+				metadata: {
+					name: "Compound Mini",
+					description: "DeFi lending and borrowing",
+					url: getCurrentOrigin(),
+					icons: [`${getCurrentOrigin()}/complogo.png`],
+				},
+			}),
+		]
+		: []),
+]
+
 const config = createConfig({
 	chains: [chain],
 	transports: {
 		[chain.id]: http(rpcUrl),
 	},
-	connectors: [
-		// Try MetaMask first, then fallback to injected
-		metaMask(),
-		injected(),
-	],
+	connectors: connectorsList,
 	// Add error handling for connector issues
 	ssr: false,
 })
@@ -63,4 +90,4 @@ export function AppWagmiProvider({ children }: { children: ReactNode }) {
 			<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 		</WagmiProvider>
 	)
-} 
+}

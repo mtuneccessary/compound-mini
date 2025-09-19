@@ -13,7 +13,21 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "Compound Finance",
   description: "DeFi lending and borrowing on Telegram",
-    generator: 'v0.dev'
+    generator: 'v0.dev',
+  // Ensure absolute URLs in metadata (fixes OG/Twitter in tunnels)
+  metadataBase: new URL(process.env.NEXT_PUBLIC_PUBLIC_BASE_URL || 'http://localhost:3002'),
+  icons: {
+    icon: "/complogo.png",
+    shortcut: "/complogo.png",
+    apple: "/complogo.png",
+  },
+  openGraph: {
+    title: "Compound Finance",
+    description: "DeFi lending and borrowing on Telegram",
+    images: [
+      { url: "/complogo.png", width: 512, height: 512, alt: "Compound" },
+    ],
+  },
 }
 
 export default function RootLayout({
@@ -27,6 +41,8 @@ export default function RootLayout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
+        {/* Telegram Mini Apps WebApp SDK */}
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <ErrorBoundary>

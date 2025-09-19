@@ -1,9 +1,7 @@
 # Compound Mini App
 
-A decentralized lending and borrowing application built with Next.js, integrating with Compound Protocol for on-chain DeFi operations.
+A decentralized lending and borrowing application, integrating with Compound Protocol for on-chain DeFi operations.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/nashons-projects/v0-telegram-mini-app)
-[![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 
 ## Features
 
@@ -145,6 +143,9 @@ The Hardhat node provides 20 test accounts with 10,000 ETH each:
 - **Private Key**: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
 - **Balance**: 10,000 ETH
 
+> Default Hardhat mnemonic (for MetaMask import):
+> `test test test test test test test test test test test junk`
+
 #### 5. MetaMask Configuration
 
 Add the local network to MetaMask:
@@ -160,24 +161,27 @@ To test DeFi functionality, you'll need WETH (Wrapped ETH). The application requ
 **Wrap ETH for a single account:**
 ```bash
 cd onchain
-npx hardhat run scripts/wrap-eth-simple.ts --network localhost
+npx hardhat run scripts/wrap-eth-simple.ts --network hardhat
 ```
 
-**Wrap ETH for multiple accounts:**
+**Wrap ETH for multiple accounts (2 ETH each):**
 ```bash
-npx hardhat run scripts/wrap-multiple.ts --network localhost
+npx hardhat run scripts/wrap-multiple.ts --network hardhat
 ```
 
 **Wrap half of your ETH:**
 ```bash
-npx hardhat run scripts/wrap-half.ts --network localhost
+npx hardhat run scripts/wrap-half.ts --network hardhat
+```
+
+**Wrap 100 ETH for first 5 accounts (used in this repo):**
+```bash
+npx hardhat run scripts/wrap-100-eth.ts --network hardhat
 ```
 
 **Expected Results:**
-- Account #0: 3.0 WETH (from multiple wrapping operations)
-- Account #1: 2.0 WETH 
-- Account #2: 2.0 WETH
-- Each account retains ~9,998 ETH for gas fees
+- Accounts funded with the requested WETH
+- Each account retains ample ETH for gas fees
 
 **Why WETH is needed:**
 - The Compound Protocol (Comet) requires WETH for supply operations
@@ -203,34 +207,39 @@ npm run node
 **Wrap ETH to WETH (Simple)**
 ```bash
 cd onchain
-npx hardhat run scripts/wrap-eth-simple.ts --network localhost
+npx hardhat run scripts/wrap-eth-simple.ts --network hardhat
 ```
 
 **Wrap Half of Your ETH**
 ```bash
-npx hardhat run scripts/wrap-half.ts --network localhost
+npx hardhat run scripts/wrap-half.ts --network hardhat
 ```
 
 **Wrap Multiple Amounts**
 ```bash
-npx hardhat run scripts/wrap-multiple.ts --network localhost
+npx hardhat run scripts/wrap-multiple.ts --network hardhat
+```
+
+**Wrap 100 ETH for First 5 Accounts**
+```bash
+npx hardhat run scripts/wrap-100-eth.ts --network hardhat
 ```
 
 #### Other Utility Scripts
 
 **Check Comet Protocol Status**
 ```bash
-npx hardhat run scripts/check-comet.ts --network localhost
+npx hardhat run scripts/check-comet.ts --network hardhat
 ```
 
 **Get WETH Price**
 ```bash
-npx hardhat run scripts/get-weth-price.ts --network localhost
+npx hardhat run scripts/get-weth-price.ts --network hardhat
 ```
 
 **Test User Positions**
 ```bash
-npx hardhat run scripts/test-positions.ts --network localhost
+npx hardhat run scripts/test-positions.ts --network hardhat
 ```
 
 **Seed Test Data**
@@ -240,7 +249,7 @@ npx hardhat run scripts/seed.ts --network hardhat
 
 **Demo Supply & Borrow**
 ```bash
-npx hardhat run scripts/demo-supply-borrow.ts --network localhost
+npx hardhat run scripts/demo-supply-borrow.ts --network hardhat
 ```
 
 ### Compile Contracts
@@ -294,8 +303,9 @@ compound-mini/
 2. **Start the local blockchain**: `cd onchain && npm run node`
 3. **Verify fork**: Check that you have real mainnet data
 4. **Wrap ETH to WETH**: Use the wrapping scripts to get WETH for testing
-   - Single account: `npx hardhat run scripts/wrap-eth-simple.ts --network localhost`
-   - Multiple accounts: `npx hardhat run scripts/wrap-multiple.ts --network localhost`
+   - Single account: `npx hardhat run scripts/wrap-eth-simple.ts --network hardhat`
+   - Multiple accounts: `npx hardhat run scripts/wrap-multiple.ts --network hardhat`
+   - 100 ETH to first 5: `npx hardhat run scripts/wrap-100-eth.ts --network hardhat`
 5. **Start the frontend**: `npm run dev`
 6. **Connect wallet**: Use MetaMask to connect to localhost:8545
 7. **Test features**: Supply, borrow, and manage positions with real contracts
@@ -304,8 +314,8 @@ compound-mini/
 
 1. **Start the local blockchain**: `cd onchain && npm run node`
 2. **Wrap ETH to WETH**: Use the wrapping scripts to get WETH for testing
-   - Single account: `npx hardhat run scripts/wrap-eth-simple.ts --network localhost`
-   - Multiple accounts: `npx hardhat run scripts/wrap-multiple.ts --network localhost`
+   - Single account: `npx hardhat run scripts/wrap-eth-simple.ts --network hardhat`
+   - Multiple accounts: `npx hardhat run scripts/wrap-multiple.ts --network hardhat`
 3. **Start the frontend**: `npm run dev`
 4. **Connect wallet**: Use MetaMask or similar to connect to localhost:8545
 5. **Test features**: Supply, borrow, and manage positions (limited to test contracts)

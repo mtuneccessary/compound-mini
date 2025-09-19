@@ -43,44 +43,48 @@ export function BorrowForm() {
 
   const loadBorrowData = async () => {
     try {
-      const { ethers } = await import("ethers")
-      if (!(window as any).ethereum) return
-      
-      const provider = new ethers.BrowserProvider((window as any).ethereum)
-      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, provider)
-      
-      // Load collateral balance, borrow balance, and health factor
+      // Load collateral balance, borrow balance, and utilization
       const [collateralBal, borrowBal, utilization] = await Promise.all([
         publicClient.readContract({
           address: COMET_ADDRESS,
           abi: cometAbi as any,
           functionName: "collateralBalanceOf",
-          args: [address, WETH_ADDRESS],
+          args: [address as `0x${string}`, WETH_ADDRESS],
         }) as Promise<bigint>,
         publicClient.readContract({
           address: COMET_ADDRESS,
           abi: cometAbi as any,
           functionName: "borrowBalanceOf",
-          args: [address],
+          args: [address as `0x${string}`],
         }) as Promise<bigint>,
-        comet.getUtilization() as Promise<bigint>
+        publicClient.readContract({
+          address: COMET_ADDRESS,
+          abi: cometAbi as any,
+          functionName: "getUtilization",
+          args: [],
+        }) as Promise<bigint>,
       ])
 
       const collateralValue = Number(collateralBal) / 1e18
       const borrowValue = Number(borrowBal) / 1e6
-      
+
       // Calculate health factor
       const wethPrice = 3000 // Placeholder
       const collateralValueUSD = collateralValue * wethPrice
-      const healthFactor = borrowValue > 0 ? (collateralValueUSD * 0.85) / borrowValue : 999
+      const hf = borrowValue > 0 ? (collateralValueUSD * 0.85) / borrowValue : 999
 
       // Get real borrow rate
-      const borrowRate = await comet.getBorrowRate(utilization)
+      const borrowRate = (await publicClient.readContract({
+        address: COMET_ADDRESS,
+        abi: cometAbi as any,
+        functionName: "getBorrowRate",
+        args: [utilization],
+      })) as bigint
       const apy = (Number(borrowRate) / 1e18) * 31536000 * 100
 
       setCollateralBalance(collateralValue)
       setBorrowBalance(borrowValue)
-      setHealthFactor(healthFactor)
+      setHealthFactor(hf)
       setBorrowApy(apy)
     } catch (error) {
       console.error("Error loading borrow data:", error)
