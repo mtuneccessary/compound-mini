@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+import { compoundTheme } from "./lib/compound-theme"
 
 const config = {
   darkMode: ["class"],
@@ -20,7 +21,57 @@ const config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
+        // Compound Theme Colors
+        compound: {
+          primary: compoundTheme.primary,
+          secondary: compoundTheme.secondary,
+          accent: compoundTheme.accent,
+          success: compoundTheme.success,
+          warning: compoundTheme.warning,
+          error: compoundTheme.error,
+          neutral: compoundTheme.neutral,
+        },
+        // Compound Success Colors (for compound-success-* classes)
+        "compound-success": {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+          950: '#052e16',
+        },
+        // Semantic Colors
+        supply: compoundTheme.primary[500],
+        borrow: compoundTheme.warning[500],
+        withdraw: compoundTheme.secondary[500],
+        repay: compoundTheme.error[500],
+        // Background Colors
+        bg: {
+          primary: compoundTheme.background.primary,
+          secondary: compoundTheme.background.secondary,
+          tertiary: compoundTheme.background.tertiary,
+          quaternary: compoundTheme.background.quaternary,
+        },
+        // Text Colors
+        text: {
+          primary: compoundTheme.text.primary,
+          secondary: compoundTheme.text.secondary,
+          tertiary: compoundTheme.text.tertiary,
+          muted: compoundTheme.text.muted,
+        },
+        // Border Colors
+        border: {
+          primary: compoundTheme.border.primary,
+          secondary: compoundTheme.border.secondary,
+          accent: compoundTheme.border.accent,
+          focus: compoundTheme.border.focus,
+        },
+        // Legacy shadcn colors (keeping for compatibility)
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",

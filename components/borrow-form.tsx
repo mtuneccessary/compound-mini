@@ -5,193 +5,376 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useCompound } from "@/lib/compound-provider"
 import { formatCurrency, formatPercentage } from "@/lib/utils"
-import { ArrowDownRight } from "lucide-react"
-import { useTelegram } from "@/lib/telegram-provider"
-import { Progress } from "@/components/ui/progress"
-import { CryptoIcon } from "./crypto-icon"
+import { ArrowDownRight, CheckCircle, Shield, Zap, TrendingUp } from "lucide-react"
+import Image from "next/image"
 import { useFeedback } from "@/lib/feedback-provider"
+import cometAbi from "@/lib/abis/comet.json"
+import erc20Abi from "@/lib/abis/erc20.json"
+import { useAccount } from "wagmi"
+import { publicClient, COMET_ADDRESS, WETH_ADDRESS, USDC_ADDRESS } from "@/lib/comet-onchain"
+import { parseUnits } from "viem"
 
 export function BorrowForm() {
-  const { availableAssets, borrowAsset, borrowLimit, totalBorrowed, borrowLimitUsed, isLoading } = useCompound()
-  const { showConfirm } = useTelegram()
   const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
+  const { address, isConnected } = useAccount()
 
-  const [selectedAsset, setSelectedAsset] = useState("")
   const [amount, setAmount] = useState("")
-  const [estimatedApr, setEstimatedApr] = useState(0)
-  const [newBorrowLimitUsed, setNewBorrowLimitUsed] = useState(borrowLimitUsed)
+  const [borrowApy, setBorrowApy] = useState(0)
+  const [collateralBalance, setCollateralBalance] = useState(0)
+  const [borrowBalance, setBorrowBalance] = useState(0)
+  const [healthFactor, setHealthFactor] = useState(999)
   const [mounted, setMounted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [borrowSuccess, setBorrowSuccess] = useState(false)
+
+  const USDC_DECIMALS = 6
+  const USDC_PRICE_USD = 1 // USDC is pegged to USD
 
   useEffect(() => {
     setMounted(true)
-    if (availableAssets.length > 0) {
-      setSelectedAsset(availableAssets[0].symbol)
-    }
-  }, [availableAssets])
+  }, [])
 
   useEffect(() => {
-    if (selectedAsset) {
-      const asset = availableAssets.find((a) => a.symbol === selectedAsset)
-      if (asset) {
-        setEstimatedApr(asset.borrowRate)
-      }
+    if (isConnected && address) {
+      loadBorrowData()
     }
-  }, [selectedAsset, availableAssets])
+  }, [isConnected, address])
 
-  useEffect(() => {
-    if (amount && selectedAsset) {
-      const amountValue = Number.parseFloat(amount) || 0
-      const newTotalBorrowed = totalBorrowed + amountValue
-      const newUsed = (newTotalBorrowed / borrowLimit) * 100
-      setNewBorrowLimitUsed(newUsed)
-    } else {
-      setNewBorrowLimitUsed(borrowLimitUsed)
+  const loadBorrowData = async () => {
+    try {
+      // Load collateral balance, borrow balance, and utilization
+      const [collateralBal, borrowBal, utilization] = await Promise.all([
+        publicClient.readContract({
+          address: COMET_ADDRESS,
+          abi: cometAbi as any,
+          functionName: "collateralBalanceOf",
+          args: [address as `0x${string}`, WETH_ADDRESS],
+        }) as Promise<bigint>,
+        publicClient.readContract({
+          address: COMET_ADDRESS,
+          abi: cometAbi as any,
+          functionName: "borrowBalanceOf",
+          args: [address as `0x${string}`],
+        }) as Promise<bigint>,
+        publicClient.readContract({
+          address: COMET_ADDRESS,
+          abi: cometAbi as any,
+          functionName: "getUtilization",
+          args: [],
+        }) as Promise<bigint>,
+      ])
+
+      const collateralValue = Number(collateralBal) / 1e18
+      const borrowValue = Number(borrowBal) / 1e6
+
+      // Calculate health factor
+      const wethPrice = 3000 // Placeholder
+      const collateralValueUSD = collateralValue * wethPrice
+      const hf = borrowValue > 0 ? (collateralValueUSD * 0.85) / borrowValue : 999
+
+      // Get real borrow rate
+      const borrowRate = (await publicClient.readContract({
+        address: COMET_ADDRESS,
+        abi: cometAbi as any,
+        functionName: "getBorrowRate",
+        args: [utilization],
+      })) as bigint
+      const apy = (Number(borrowRate) / 1e18) * 31536000 * 100
+
+      setCollateralBalance(collateralValue)
+      setBorrowBalance(borrowValue)
+      setHealthFactor(hf)
+      setBorrowApy(apy)
+    } catch (error) {
+      console.error("Error loading borrow data:", error)
+      setCollateralBalance(0)
+      setBorrowBalance(0)
+      setHealthFactor(999)
+      setBorrowApy(0)
     }
-  }, [amount, selectedAsset, borrowLimit, totalBorrowed, borrowLimitUsed])
+  }
 
   if (!mounted) return null
 
-  const selectedAssetData = availableAssets.find((a) => a.symbol === selectedAsset)
-  const maxBorrowAmount = borrowLimit - totalBorrowed
-
   const handleBorrow = async () => {
-    if (!selectedAsset || !amount || Number.parseFloat(amount) <= 0) {
+    if (!amount || Number.parseFloat(amount) <= 0) {
       showError("Invalid input", "Please enter a valid amount")
       return
     }
 
-    if (Number.parseFloat(amount) > maxBorrowAmount) {
-      showError("Exceeds borrow limit", "Amount exceeds your borrow limit")
+    if (collateralBalance <= 0) {
+      showError("No Collateral", "You need to supply WETH as collateral before borrowing")
       return
     }
 
-    const confirmed = await showConfirm(`Borrow ${amount} ${selectedAsset}?`)
-    if (confirmed) {
-      try {
-        showLoading(`Borrowing ${amount} ${selectedAsset}...`)
-        await borrowAsset(selectedAsset, Number.parseFloat(amount))
-        hideLoading()
-        showSuccess("Borrow successful", `You have borrowed ${amount} ${selectedAsset}`)
-        setAmount("")
-      } catch (error: any) {
-        hideLoading()
-        showError("Borrow failed", error.message || "An error occurred while borrowing")
+    setIsSubmitting(true)
+    showLoading(`Borrowing ${amount} USDC...`)
+
+    try {
+      const { ethers } = await import("ethers")
+      if (!(window as any).ethereum) throw new Error("No wallet detected")
+      const provider = new ethers.BrowserProvider((window as any).ethereum)
+      const signer = await provider.getSigner()
+
+      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, signer)
+      const rawAmount = parseUnits(amount, USDC_DECIMALS)
+
+      // Check minimum borrow
+      const minBorrow = await comet.baseBorrowMin()
+      if (rawAmount < minBorrow) {
+        throw new Error(`Minimum borrow is ${Number(minBorrow) / 1e6} USDC`)
       }
+
+      // Execute borrow
+      showLoading(`Borrowing ${amount} USDC...`)
+      const borrowTx = await comet.withdraw(USDC_ADDRESS, rawAmount)
+      await borrowTx.wait()
+
+      hideLoading()
+      setBorrowSuccess(true)
+    } catch (error: any) {
+      hideLoading()
+      const msg = error?.shortMessage || error?.reason || error?.message || "Transaction failed"
+      showError("Borrow failed", msg)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  const handleMaxClick = () => {
-    setAmount(maxBorrowAmount.toString())
+  const handleMaxClick = async () => {
+    try {
+      const { ethers } = await import("ethers")
+      if (!(window as any).ethereum) return
+      
+      const provider = new ethers.BrowserProvider((window as any).ethereum)
+      const comet = new ethers.Contract(COMET_ADDRESS, cometAbi as any, provider)
+      const minBorrow = await comet.baseBorrowMin()
+      setAmount((Number(minBorrow) / 1e6).toString())
+    } catch (error) {
+      console.error("Error getting minimum borrow:", error)
+    }
   }
 
-  const limitColor = newBorrowLimitUsed > 80 ? "bg-red-500" : newBorrowLimitUsed > 60 ? "bg-yellow-500" : "bg-blue-500"
+  const projectedInterest = Number(amount) * (borrowApy / 100)
+  const newBorrowBalance = borrowBalance + Number(amount)
+  const newHealthFactor = collateralBalance > 0 ? (collateralBalance * 3000 * 0.85) / newBorrowBalance : 999
+
+  // Success state
+  if (borrowSuccess) {
+    return (
+      <div className="p-4 pb-24">
+        <Card className="bg-gradient-to-br from-yellow-900/20 to-red-900/20 border-yellow-500/20 text-white">
+          <CardContent className="p-8 text-center">
+            <div className="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ArrowDownRight className="h-12 w-12 text-yellow-400" />
+            </div>
+            <h2 className="text-3xl font-bold text-yellow-400 mb-3">Borrow Successful!</h2>
+            <p className="text-xl text-white mb-2">
+              You have borrowed <span className="font-bold text-yellow-400">{amount} USDC</span>
+            </p>
+            <p className="text-gray-400 mb-6">
+              Borrow rate: {borrowApy.toFixed(2)}% APY
+            </p>
+            <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4 mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">Projected Annual Interest</span>
+                <span className="text-yellow-400 font-semibold">
+                  ${projectedInterest.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-400">New Health Factor</span>
+                <span className={`font-semibold ${newHealthFactor >= 2 ? 'text-green-400' : newHealthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                  {newHealthFactor > 999 ? '∞' : newHealthFactor.toFixed(2)}x
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Total Borrowed</span>
+                <span className="text-white font-semibold">
+                  ${newBorrowBalance.toFixed(2)} USDC
+                </span>
+              </div>
+            </div>
+            <Button 
+              onClick={() => window.location.href = "/dashboard"}
+              className="w-full bg-yellow-600 hover:bg-yellow-700 text-white h-12"
+            >
+              Go to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="p-4">
+        <Card className="bg-[#1a1d26] border-[#2a2d36] text-white text-center py-8">
+          <CardHeader>
+            <Image src="/usdc-icon.webp" alt="USDC" width={60} height={60} className="mx-auto mb-4" />
+            <CardTitle className="text-2xl">Connect Wallet to Borrow</CardTitle>
+            <CardDescription className="text-gray-400">
+              Please connect your wallet to borrow USDC against your collateral.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-4">
+    <div className="p-4 space-y-4 pb-24">
+      {/* Current Position Card */}
+      <Card className="bg-gradient-to-r from-yellow-800/30 to-red-800/30 border-yellow-500/20 text-white">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Image src="/weth-icon.png" alt="WETH" width={32} height={32} className="rounded-full" />
+              <div>
+                <p className="text-sm text-gray-300">Collateral Balance</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(collateralBalance, "WETH")}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-300">Health Factor</p>
+              <p className={`text-xl font-bold ${healthFactor >= 2 ? 'text-green-400' : healthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {healthFactor > 999 ? '∞' : healthFactor.toFixed(2)}x
+              </p>
+            </div>
+          </div>
+          
+          {borrowBalance > 0 && (
+            <div className="flex items-center justify-between pt-4 border-t border-yellow-500/20">
+              <div className="flex items-center gap-3">
+                <Image src="/usdc-icon.webp" alt="USDC" width={24} height={24} className="rounded-full" />
+                <div>
+                  <p className="text-sm text-gray-300">Currently Borrowed</p>
+                  <p className="text-lg font-bold">
+                    ${borrowBalance.toFixed(2)} USDC
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Borrow Form */}
       <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
         <CardHeader>
-          <CardTitle className="text-xl">Borrow Assets</CardTitle>
-          <CardDescription className="text-gray-400">Borrow against your supplied collateral</CardDescription>
+          <CardTitle className="text-xl">Borrow USDC</CardTitle>
+          <CardDescription className="text-gray-400">
+            Borrow USDC against your WETH collateral.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="asset">Asset</Label>
-            <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-              <SelectTrigger id="asset" className="bg-[#252836] border-[#2a2d36]">
-                <SelectValue placeholder="Select asset">
-                  {selectedAsset && (
-                    <div className="flex items-center gap-2">
-                      <CryptoIcon symbol={selectedAsset} size={20} />
-                      <span>{selectedAsset}</span>
-                    </div>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="bg-[#252836] border-[#2a2d36] text-white">
-                {availableAssets.map((asset) => (
-                  <SelectItem key={asset.symbol} value={asset.symbol}>
-                    <div className="flex items-center gap-2">
-                      <CryptoIcon symbol={asset.symbol} size={20} />
-                      <span>
-                        {asset.symbol} - {asset.name}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="amount">Amount</Label>
-              <span className="text-xs text-gray-400">Available: {formatCurrency(maxBorrowAmount, selectedAsset)}</span>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="amount" className="text-gray-300">Amount to Borrow</Label>
+              <span className="text-sm text-gray-400">USDC only</span>
             </div>
             <div className="relative">
               <Input
                 id="amount"
                 type="number"
-                placeholder="0.0"
+                placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="bg-[#252836] border-[#2a2d36] pr-16"
+                className="bg-[#252836] border-[#2a2d36] pr-20 h-14 text-lg"
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-1 h-7 text-xs text-blue-400 hover:text-blue-300"
-                onClick={handleMaxClick}
-              >
-                MAX
-              </Button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <Image src="/usdc-icon.webp" alt="USDC" width={20} height={20} className="rounded-full" />
+                <span className="text-white font-semibold">USDC</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-blue-400 hover:text-blue-300"
+                  onClick={handleMaxClick}
+                >
+                  MIN
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Borrow Limit Used</span>
-              <span>{newBorrowLimitUsed.toFixed(2)}%</span>
+          {/* Borrow Preview */}
+          <div className="bg-[#252836] p-4 rounded-lg space-y-3 border border-[#2a2d36]">
+            <div className="text-lg font-semibold text-white">Borrow Overview</div>
+            <div className="flex justify-between text-sm text-gray-300">
+              <span>Borrow APY</span>
+              <span className="font-medium text-yellow-400">
+                {borrowApy > 0 ? `${borrowApy.toFixed(2)}%` : 'Loading...'}
+              </span>
             </div>
-            <Progress value={newBorrowLimitUsed} className="h-2 bg-[#252836]" indicatorClassName={limitColor} />
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>0%</span>
-              <span>Borrow Limit: {formatCurrency(borrowLimit)}</span>
-              <span>100%</span>
+            <div className="flex justify-between text-sm text-gray-300">
+              <span>Projected Annual Interest</span>
+              <span>${projectedInterest.toFixed(2)}</span>
             </div>
-          </div>
-
-          <div className="bg-[#252836] p-3 rounded-lg space-y-2">
-            <div className="text-sm font-medium">Borrow Information</div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Borrow APR</span>
-              <span>{formatPercentage(estimatedApr)}</span>
+            <div className="flex justify-between text-sm text-gray-300">
+              <span>New Health Factor</span>
+              <span className={`font-medium ${newHealthFactor >= 2 ? 'text-green-400' : newHealthFactor >= 1.5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {newHealthFactor > 999 ? '∞' : newHealthFactor.toFixed(2)}x
+              </span>
             </div>
           </div>
 
           <Button
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full bg-gradient-to-r from-yellow-600 to-red-600 hover:from-yellow-700 hover:to-red-700 text-white h-12 text-lg font-semibold"
             onClick={handleBorrow}
-            disabled={
-              isLoading || !amount || Number.parseFloat(amount) <= 0 || Number.parseFloat(amount) > maxBorrowAmount
-            }
+            disabled={!isConnected || isSubmitting || !amount || Number.parseFloat(amount) <= 0 || collateralBalance <= 0}
           >
-            {isLoading ? (
+            {isSubmitting ? (
               <div className="flex items-center">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Processing...
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                Processing Transaction...
               </div>
             ) : (
               <>
-                <ArrowDownRight className="mr-2 h-4 w-4" />
-                Borrow {selectedAsset}
+                <ArrowDownRight className="mr-2 h-5 w-5" />
+                Borrow USDC
               </>
             )}
           </Button>
         </CardContent>
       </Card>
+
+      {/* Benefits Section */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-white">Why Borrow USDC?</h3>
+        <div className="grid grid-cols-1 gap-3">
+          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+            <CardContent className="p-4 flex items-center gap-3">
+              <CheckCircle className="h-6 w-6 text-yellow-400" />
+              <div>
+                <h4 className="font-semibold">Access Liquidity</h4>
+                <p className="text-sm text-gray-400">Borrow against your collateral without selling it.</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Shield className="h-6 w-6 text-blue-400" />
+              <div>
+                <h4 className="font-semibold">Maintain Exposure</h4>
+                <p className="text-sm text-gray-400">Keep your WETH position while accessing cash.</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Zap className="h-6 w-6 text-purple-400" />
+              <div>
+                <h4 className="font-semibold">Flexible Repayment</h4>
+                <p className="text-sm text-gray-400">Repay anytime to reduce interest costs.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
