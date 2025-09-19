@@ -68,12 +68,19 @@ export function SupplyForm() {
       })
       setCollateralBalance(Number(formatUnits(collateralBal, 18)))
 
-      // Load supply APY
+      // Load utilization first, then supply rate
+      const utilization = await publicClient.readContract({
+        address: COMET_ADDRESS,
+        abi: cometAbi,
+        functionName: "getUtilization",
+        args: [],
+      })
+      
       const rate = await publicClient.readContract({
         address: COMET_ADDRESS,
         abi: cometAbi,
         functionName: "getSupplyRate",
-        args: [WETH_ADDRESS],
+        args: [utilization],
       })
       setSupplyApy(Number(formatUnits(rate, 18)) * 100)
     } catch (error) {

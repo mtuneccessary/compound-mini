@@ -60,7 +60,8 @@ export function RepayForm() {
         functionName: "collateralBalanceOf",
         args: [address, WETH_ADDRESS],
       })
-      setCollateralBalance(Number(formatUnits(collateral, 18)))
+      const collateralValue = Number(formatUnits(collateral, 18))
+      setCollateralBalance(collateralValue)
 
       // Fetch borrow balance
       const borrow = await publicClient.readContract({
@@ -69,7 +70,8 @@ export function RepayForm() {
         functionName: "borrowBalanceOf",
         args: [address],
       })
-      setBorrowBalance(Number(formatUnits(borrow, USDC_DECIMALS)))
+      const borrowValue = Number(formatUnits(borrow, USDC_DECIMALS))
+      setBorrowBalance(borrowValue)
 
       // Fetch USDC balance
       const usdcBal = await publicClient.readContract({
@@ -80,18 +82,25 @@ export function RepayForm() {
       })
       setUsdcBalance(Number(formatUnits(usdcBal, USDC_DECIMALS)))
 
-      // Fetch borrow rate
-      const rate = await publicClient.readContract({
+      // Fetch borrow rate - need to pass USDC_ADDRESS
+      // Fetch utilization first, then borrow rate
+      const utilization = await publicClient.readContract({
+        address: COMET_ADDRESS,
+        abi: cometAbi,
+        functionName: "getUtilization",
+        args: [],
+      })
+            const rate = await publicClient.readContract({
         address: COMET_ADDRESS,
         abi: cometAbi,
         functionName: "getBorrowRate",
-        args: [],
+        args: [USDC_ADDRESS],
       })
       setBorrowRate(Number(formatUnits(rate, 18)) * 100)
 
-      // Calculate health factor
-      const collateralValueUSD = collateralBalance * 3000 // WETH price
-      const healthFactor = borrowBalance > 0 ? (collateralValueUSD * 0.85) / borrowBalance : 999
+      // Calculate health factor using the fetched values
+      const collateralValueUSD = collateralValue * 3000 // WETH price
+      const healthFactor = borrowValue > 0 ? (collateralValueUSD * 0.85) / borrowValue : 999
       setHealthFactor(healthFactor)
     } catch (error) {
       console.error("Error loading repay data:", error)
