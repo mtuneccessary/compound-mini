@@ -199,7 +199,12 @@ export function PortfolioAnalytics() {
     if (address) {
       fetchPortfolioData()
       const interval = setInterval(fetchPortfolioData, 30000) // Refresh every 30 seconds
-      return () => clearInterval(interval)
+      const handler = () => fetchPortfolioData()
+      window.addEventListener('onchain:updated', handler)
+      return () => {
+        clearInterval(interval)
+        window.removeEventListener('onchain:updated', handler)
+      }
     }
   }, [address])
 

@@ -17,6 +17,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { isTelegramEnv } from "@/lib/utils"
 
 export function WalletConnect() {
 	const { address, isConnected } = useAccount()
@@ -38,7 +39,7 @@ export function WalletConnect() {
 	}
 
 	const connectDefault = () => {
-		const inTelegram = typeof window !== "undefined" && (window as any).Telegram?.WebApp
+		const inTelegram = isTelegramEnv()
 		const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
 		const isMobile = /iPhone|iPad|iPod|Android/i.test(ua)
 
@@ -49,10 +50,8 @@ export function WalletConnect() {
 		const wc = connectors.find((c) => c.id === "walletConnect")
 		const injC = connectors.find((c) => c.id === "injected")
 
-		// Detect if any injected provider is available (MetaMask, Rabby, etc.)
 		const hasInjected = () => {
 			try {
-				// @ts-ignore
 				const eth = typeof window !== 'undefined' ? (window as any).ethereum : undefined
 				if (!eth) return false
 				if (Array.isArray(eth.providers)) return eth.providers.length > 0
@@ -60,7 +59,6 @@ export function WalletConnect() {
 			} catch { return !!injC }
 		}
 
-		// If using WalletConnect in Telegram mobile, open deep link when URI is ready
 		if (wc) {
 			try {
 				// @ts-ignore - wagmi connector emits messages
@@ -72,14 +70,13 @@ export function WalletConnect() {
 							const mmDeepLink = `metamask://wc?uri=${encodeURIComponent(uri)}`
 							const mmUniversal = `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`
 							try {
-								// @ts-ignore Telegram SDK
-								(window as any).Telegram?.WebApp?.openLink?.(mmDeepLink, { try_instant_view: false })
+								;(window as any).Telegram?.WebApp?.openLink?.(mmDeepLink, { try_instant_view: false })
 							} catch {}
 							setTimeout(() => {
 								try {
 									(window as any).Telegram?.WebApp?.openLink?.(mmUniversal, { try_instant_view: false })
 								} catch {
-									window.location.href = mmUniversal
+								window.location.href = mmUniversal
 								}
 							}, 400)
 						}

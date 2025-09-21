@@ -1,6 +1,6 @@
 "use client"
 
-import { createPublicClient, createWalletClient, http, parseUnits, defineChain } from "viem"
+import { createPublicClient, createWalletClient, http, parseUnits, defineChain, custom } from "viem"
 import { hardhat, sepolia } from "viem/chains"
 import cometAbi from "./abis/comet.json"
 import erc20Abi from "./abis/erc20.json"
@@ -8,6 +8,7 @@ import { getCurrentNetworkConfig, getRpcUrl } from "./network-config"
 
 // Get current network configuration
 const networkConfig = getCurrentNetworkConfig()
+console.log("🔍 [DEBUG] Network config loaded:", JSON.stringify(networkConfig, null, 2))
 const rpcUrl = getRpcUrl()
 
 // Create chain configuration based on current network
@@ -31,8 +32,23 @@ const chain = networkConfig.chainId === 31337
 export const publicClient = createPublicClient({ chain, transport: http(rpcUrl) })
 
 export function getWalletClient() {
+	console.log("🔍 [DEBUG] Creating wallet client for chain:", chain.id)
+	console.log("🔍 [DEBUG] Chain name:", chain.name)
 	if (typeof window === "undefined") throw new Error("wallet client only available in browser")
-	return createWalletClient({ chain, transport: http(rpcUrl) })
+	const ethereum = (window as any).ethereum
+	if (!ethereum) throw new Error("No wallet detected. Please install or enable a wallet (e.g. MetaMask)")
+	return createWalletClient({ chain, transport: custom(ethereum) })
+}
+
+export function getWalletPublicClient() {
+	try {
+		if (typeof window === 'undefined') return null
+		const ethereum = (window as any).ethereum
+		if (!ethereum) return null
+		return createPublicClient({ chain, transport: custom(ethereum) })
+	} catch {
+		return null
+	}
 }
 
 // Use network configuration for contract addresses

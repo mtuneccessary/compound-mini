@@ -1,20 +1,28 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { formatCurrency, formatPercentage } from "@/lib/utils"
-import { ArrowDownRight, CheckCircle, Shield, Zap, TrendingUp, PiggyBank } from "lucide-react"
-import Image from "next/image"
+import { Badge } from "@/components/ui/badge"
+import { 
+  PiggyBank, 
+  TrendingUp, 
+  ArrowRight, 
+  CheckCircle,
+  AlertCircle,
+  Shield,
+  Zap
+} from "lucide-react"
 import { useFeedback } from "@/lib/feedback-provider"
-import cometAbi from "@/lib/abis/comet.json"
-import erc20Abi from "@/lib/abis/erc20.json"
 import { useAccount } from "wagmi"
-import { publicClient, COMET_ADDRESS, WETH_ADDRESS, USDC_ADDRESS } from "@/lib/comet-onchain"
-import { parseUnits, formatUnits } from "viem"
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import Image from "next/image"
+import { motion } from "framer-motion"
+import { publicClient, WETH_ADDRESS, COMET_ADDRESS, USDC_ADDRESS, approve as viemApprove, supply as viemSupply } from "@/lib/comet-onchain"
+import { checkBalanceAfterTransaction, waitForBlockConfirmation } from "@/lib/simple-debug"
+import { parseUnits } from "viem"
+import erc20Abi from "@/lib/abis/erc20.json"
+import cometAbi from "@/lib/abis/comet.json"
 
 export function SupplyForm() {
   const { showSuccess, showError, showLoading, hideLoading } = useFeedback()
@@ -27,16 +35,6 @@ export function SupplyForm() {
   const [mounted, setMounted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [supplySuccess, setSupplySuccess] = useState(false)
-  const [step, setStep] = useState<'idle' | 'approving' | 'supplying'>('idle')
-
-  const WETH_DECIMALS = 18
-  const WETH_PRICE_USD = 3000 // Placeholder for WETH price
-
-  // Wagmi hooks - always called
-  const { writeContract, data: hash, error, isPending } = useWriteContract()
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash,
-  })
 
   useEffect(() => {
     setMounted(true)
@@ -44,190 +42,87 @@ export function SupplyForm() {
 
   useEffect(() => {
     if (isConnected && address) {
-      loadSupplyData()
+      loadWethBalance()
+      loadCollateral()
+      loadSupplyApy()
     }
   }, [isConnected, address])
 
-  const loadSupplyData = async () => {
+  const loadWethBalance = async () => {
     try {
-      // Load WETH balance
-      const wethBal = await publicClient.readContract({
-        address: WETH_ADDRESS,
-        abi: erc20Abi,
+      if (!address) return
+      const balance = (await publicClient.readContract({
+        address: WETH_ADDRESS as `0x${string}`,
+        abi: erc20Abi as any,
         functionName: "balanceOf",
-        args: [address],
-      })
-      setWethBalance(Number(formatUnits(wethBal, 18)))
+        args: [address as `0x${string}`],
+      })) as bigint
+      setWethBalance(Number(balance) / 1e18)
+    } catch (error) {
+      console.error("Error loading WETH balance:", error)
+      setWethBalance(0)
+    }
+  }
 
-      // Load collateral balance
-      const collateralBal = await publicClient.readContract({
-        address: COMET_ADDRESS,
-        abi: cometAbi,
+  const loadCollateral = async () => {
+    try {
+      if (!address) return
+      const collateral = (await publicClient.readContract({
+        address: COMET_ADDRESS as `0x${string}`,
+        abi: cometAbi as any,
         functionName: "collateralBalanceOf",
-        args: [address, WETH_ADDRESS],
-      })
-      setCollateralBalance(Number(formatUnits(collateralBal, 18)))
+        args: [address as `0x${string}`, WETH_ADDRESS as `0x${string}`],
+      })) as bigint
+      setCollateralBalance(Number(collateral) / 1e18)
+    } catch (error) {
+      console.error("Error loading collateral:", error)
+      setCollateralBalance(0)
+    }
+  }
 
-      // Load utilization first, then supply rate
-      const utilization = await publicClient.readContract({
-        address: COMET_ADDRESS,
-        abi: cometAbi,
+  const loadSupplyApy = async () => {
+    try {
+      const utilization = (await publicClient.readContract({
+        address: COMET_ADDRESS as `0x${string}`,
+        abi: cometAbi as any,
         functionName: "getUtilization",
         args: [],
-      })
-      
-      const rate = await publicClient.readContract({
-        address: COMET_ADDRESS,
-        abi: cometAbi,
+      })) as bigint
+      const supplyRate = (await publicClient.readContract({
+        address: COMET_ADDRESS as `0x${string}`,
+        abi: cometAbi as any,
         functionName: "getSupplyRate",
         args: [utilization],
-      })
-      setSupplyApy(Number(formatUnits(rate, 18)) * 100)
+      })) as bigint
+      const secondsPerYear = 31536000
+      const apy = (Number(supplyRate) / 1e18) * secondsPerYear * 100
+      setSupplyApy(apy)
     } catch (error) {
-      console.error("Error loading supply data:", error)
-      setWethBalance(0)
-      setCollateralBalance(0)
+      console.error("Error loading supply APY:", error)
       setSupplyApy(0)
     }
   }
 
-  // Handle transaction confirmation
-  useEffect(() => {
-    if (isConfirmed && hash && step === 'approving') {
-      // Approval confirmed, now supply
-      setStep('supplying')
-      const rawAmount = parseUnits(amount, WETH_DECIMALS)
-      writeContract({
-        address: COMET_ADDRESS,
-        abi: cometAbi,
-        functionName: "supply",
-        args: [WETH_ADDRESS, rawAmount],
-      })
-    } else if (isConfirmed && hash && step === 'supplying') {
-      // Supply confirmed
-      hideLoading()
-      setSupplySuccess(true)
-      setIsSubmitting(false)
-      setStep('idle')
-      
-      // Refresh balances
-      loadSupplyData()
-      
-      // Notify other parts of the app
-      try {
-        const evt = new Event('onchain:updated')
-        window.dispatchEvent(evt)
-      } catch {}
-    }
-  }, [isConfirmed, hash, step, amount])
-
-  // Handle errors
-  useEffect(() => {
-    if (error) {
-      hideLoading()
-      const msg = error?.shortMessage || error?.reason || error?.message || "Transaction failed"
-      showError("Transaction Failed", msg)
-      setIsSubmitting(false)
-      setStep('idle')
-    }
-  }, [error])
-
   if (!mounted) return null
 
-  const handleSupply = async () => {
-    if (!amount || Number.parseFloat(amount) <= 0) {
-      showError("Invalid input", "Please enter a valid amount")
-      return
-    }
-
-    if (Number.parseFloat(amount) > wethBalance) {
-      showError("Insufficient Balance", `You only have ${formatCurrency(wethBalance, "WETH")} available`)
-      return
-    }
-
-    try {
-      setIsSubmitting(true)
-      setStep('approving')
-      showLoading(`Approving ${amount} WETH...`)
-
-      const rawAmount = parseUnits(amount, WETH_DECIMALS)
-
-      // First approve WETH
-      writeContract({
-        address: WETH_ADDRESS,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [COMET_ADDRESS, rawAmount],
-      })
-    } catch (error: any) {
-      hideLoading()
-      const msg = error?.shortMessage || error?.reason || error?.message || "Transaction failed"
-      showError("Supply Failed", msg)
-      setIsSubmitting(false)
-      setStep('idle')
-    }
-  }
-
-  const handleMaxClick = () => {
-    setAmount(wethBalance.toString())
-  }
-
-  const interestEarned = Number(amount) * (supplyApy / 100)
-  const newCollateralBalance = collateralBalance + Number(amount)
-  const newCollateralValueUSD = newCollateralBalance * WETH_PRICE_USD
-
-  const isLoading = isPending || isConfirming || isSubmitting
-  const buttonText = step === 'approving' ? 'Approving...' : 
-                   step === 'supplying' ? 'Supplying...' : 
-                   'Supply WETH'
-
-  // Success state
-  if (supplySuccess) {
+  if (!isConnected) {
     return (
       <div className="p-4 pb-24">
         <Card className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border-blue-500/20 text-white">
           <CardContent className="p-8 text-center">
             <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ArrowDownRight className="h-12 w-12 text-blue-400" />
+              <PiggyBank className="h-10 w-10 text-blue-400" />
             </div>
-            <h2 className="text-3xl font-bold text-blue-400 mb-3">Supply Successful!</h2>
-            <p className="text-xl text-white mb-2">
-              You have supplied <span className="font-bold text-blue-400">{amount} WETH</span>
-            </p>
+            <h2 className="text-2xl font-semibold mb-3">Connect Your Wallet</h2>
             <p className="text-gray-400 mb-6">
-              Supply rate: {supplyApy.toFixed(2)}% APY
+              Connect your wallet to start supplying WETH and earning interest.
             </p>
-            <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4 mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">Interest Earned Annually</span>
-                <span className="text-green-400 font-semibold">
-                  {interestEarned.toFixed(4)} WETH
-                </span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">USD Value</span>
-                <span className="text-white font-semibold">
-                  ${(interestEarned * WETH_PRICE_USD).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">Total Collateral</span>
-                <span className="text-white font-semibold">
-                  {newCollateralBalance.toFixed(4)} WETH
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Total USD Value</span>
-                <span className="text-white font-semibold">
-                  ${newCollateralValueUSD.toFixed(2)}
-                </span>
-              </div>
-            </div>
             <Button 
-              onClick={() => window.location.href = "/dashboard"}
+              size="lg" 
               className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12"
             >
-              Go to Dashboard
+              <PiggyBank className="h-5 w-5 mr-2" />
+              Connect Wallet to Supply
             </Button>
           </CardContent>
         </Card>
@@ -235,60 +130,142 @@ export function SupplyForm() {
     )
   }
 
-  if (!isConnected) {
+  const handleMaxClick = () => {
+    setAmount(wethBalance.toString())
+  }
+
+  const handleSupply = async () => {
+    if (!amount || Number.parseFloat(amount) <= 0) {
+      showError("Invalid Amount", "Please enter a valid amount to supply")
+      return
+    }
+
+    if (Number.parseFloat(amount) > wethBalance) {
+      showError("Insufficient Balance", "You don't have enough WETH in your wallet")
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      showLoading(`Supplying ${amount} WETH...`)
+
+      if (!address) throw new Error("No wallet address")
+      console.log("🔍 [DEBUG] Supply transaction - address:", address)
+      console.log("🔍 [DEBUG] Supply transaction - WETH_ADDRESS:", WETH_ADDRESS)
+      console.log("🔍 [DEBUG] Supply transaction - COMET_ADDRESS:", COMET_ADDRESS)
+      const value = parseUnits(amount, 18)
+
+      // Check allowance via readContract
+      const currentAllowance = (await publicClient.readContract({
+        address: WETH_ADDRESS as `0x${string}`,
+        abi: erc20Abi as any,
+        functionName: "allowance",
+        args: [address as `0x${string}`, COMET_ADDRESS as `0x${string}`]
+      })) as bigint
+
+      if (currentAllowance < value) {
+        showLoading("Approving WETH...")
+        console.log("🔍 [DEBUG] About to approve with wallet client")
+        const approveHash = await viemApprove(WETH_ADDRESS as `0x${string}`, address as `0x${string}`, COMET_ADDRESS as `0x${string}`, value)
+        await waitForBlockConfirmation(publicClient, approveHash as `0x${string}`)
+        console.log("🔍 [DEBUG] Approval transaction confirmed")
+        showSuccess("Approval successful", "WETH approved for Compound Mini.")
+      }
+
+      showLoading("Supplying WETH...")
+      const supplyHash = await viemSupply(WETH_ADDRESS as `0x${string}`, address as `0x${string}`, value)
+      await waitForBlockConfirmation(publicClient, supplyHash as `0x${string}`)
+      console.log("🔍 [DEBUG] Supply transaction confirmed")
+
+      console.log("🔍 [DEBUG] Transaction confirmed, updating local state...")
+      await Promise.all([loadWethBalance(), loadCollateral()])
+      
+      // Add a small delay to ensure blockchain state has propagated
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      console.log("🔍 [DEBUG] Dispatching onchain:updated event...")
+      try {
+        const evt = new Event('onchain:updated')
+        window.dispatchEvent(evt)
+      } catch (error) {
+        console.error("🔍 [DEBUG] Error dispatching event:", error)
+      }
+
+      hideLoading()
+      setSupplySuccess(true)
+    } catch (error: any) {
+      hideLoading()
+      const details = error?.cause?.shortMessage || error?.shortMessage || error?.cause?.message || error?.message
+      const fallback = "Transaction failed. If you rejected the request, try again."
+      const msg = details || fallback
+      showError("Supply Failed", msg)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const projectedEarnings = Number(amount) * (supplyApy / 100)
+
+  // Success state
+  if (supplySuccess) {
     return (
-      <div className="p-4">
-        <Card className="bg-[#1a1d26] border-[#2a2d36] text-white text-center py-8">
-          <CardHeader>
-            <Image src="/weth-icon.png" alt="WETH" width={60} height={60} className="mx-auto mb-4" />
-            <CardTitle className="text-2xl">Connect Wallet to Supply</CardTitle>
-            <CardDescription className="text-gray-400">
-              Please connect your wallet to supply WETH and start earning interest.
-            </CardDescription>
-          </CardHeader>
+      <div className="p-4 pb-24">
+        <Card className="bg-gradient-to-br from-green-900/20 to-blue-900/20 border-green-500/20 text-white">
+          <CardContent className="p-8 text-center">
+            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="h-12 w-12 text-green-400" />
+            </div>
+            <h2 className="text-3xl font-bold text-green-400 mb-3">Supply Successful!</h2>
+            <p className="text-xl text-white mb-2">
+              You have supplied <span className="font-bold text-green-400">{amount} WETH</span>
+            </p>
+            <p className="text-gray-400 mb-6">
+              You're now earning interest on your supplied assets.
+            </p>
+            <Button className="w-full h-12" onClick={() => setSupplySuccess(false)}>
+              Done
+            </Button>
+          </CardContent>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="p-4 space-y-4 pb-24">
-      {/* Current Position Card */}
-      <Card className="bg-gradient-to-r from-blue-800/30 to-purple-800/30 border-blue-500/20 text-white">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="p-4 pb-24 space-y-4"
+    >
+      {/* WETH Balance Card */}
+      <Card className="bg-gradient-to-br from-green-900/20 to-blue-900/20 border-green-500/20 text-white">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Image src="/weth-icon.png" alt="WETH" width={32} height={32} className="rounded-full" />
+              <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                <Image 
+                  src="/weth-icon.png" 
+                  alt="WETH" 
+                  width={24} 
+                  height={24} 
+                  className="rounded-full"
+                />
+              </div>
               <div>
-                <p className="text-sm text-gray-300">Wallet Balance</p>
-                <p className="text-2xl font-bold">
-                  {wethBalance.toFixed(4)} WETH
-                </p>
+                <h3 className="font-semibold text-lg">WETH</h3>
+                <p className="text-sm text-gray-400">Wallet balance and supplied</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-300">Supply Rate</p>
-              <p className="text-xl font-bold text-green-400">
-                {supplyApy > 0 ? `${supplyApy.toFixed(2)}%` : 'Loading...'}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between pt-4 border-t border-blue-500/20">
-            <div className="flex items-center gap-3">
-              <Image src="/weth-icon.png" alt="WETH" width={24} height={24} className="rounded-full" />
-              <div>
-                <p className="text-sm text-gray-300">Supplied Collateral</p>
-                <p className="text-lg font-bold">
-                  {collateralBalance.toFixed(4)} WETH
-                </p>
+            <div className="text-right space-y-1">
+              <div className="text-2xl font-bold text-green-400">
+                {wethBalance.toFixed(4)} WETH
               </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-300">USD Value</p>
-              <p className="text-lg font-bold">
-                ${(collateralBalance * WETH_PRICE_USD).toFixed(2)}
-              </p>
+              <div className="text-sm text-gray-400">Wallet</div>
+              <div className="text-lg font-semibold text-blue-300">
+                {collateralBalance.toFixed(4)} WETH
+              </div>
+              <div className="text-sm text-gray-400">Supplied</div>
             </div>
           </div>
         </CardContent>
@@ -296,126 +273,141 @@ export function SupplyForm() {
 
       {/* Supply Form */}
       <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-        <CardHeader>
-          <CardTitle className="text-xl">Supply WETH</CardTitle>
-          <CardDescription className="text-gray-400">
-            Supply WETH to earn interest and use as collateral for borrowing.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
+        <CardContent className="p-6 space-y-6">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2">Supply WETH</h2>
+            <p className="text-gray-400">Earn interest on your WETH assets</p>
+          </div>
+
+          {/* Amount Input */}
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <Label htmlFor="amount" className="text-gray-300">Amount to Supply</Label>
-              <span className="text-sm text-gray-400">WETH only</span>
+              <label className="text-sm font-medium">Amount</label>
+              <span className="text-xs text-gray-400">
+                Balance: {wethBalance.toFixed(4)} WETH
+              </span>
             </div>
             <div className="relative">
               <Input
-                id="amount"
                 type="number"
-                placeholder="0.00"
+                placeholder="0.0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="bg-[#252836] border-[#2a2d36] pr-20 h-14 text-lg"
-                disabled={isLoading}
+                className="bg-[#252836] border-[#2a2d36] text-white text-lg h-14 pr-20"
               />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <Image src="/weth-icon.png" alt="WETH" width={20} height={20} className="rounded-full" />
-                <span className="text-white font-semibold">WETH</span>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-xs text-blue-400 hover:text-blue-300"
+                  className="h-8 px-3 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                   onClick={handleMaxClick}
-                  disabled={isLoading}
                 >
                   MAX
                 </Button>
+                <div className="flex items-center gap-1 text-sm text-gray-400">
+                  <Image 
+                    src="/weth-icon.png" 
+                    alt="WETH" 
+                    width={16} 
+                    height={16} 
+                    className="rounded-full"
+                  />
+                  <span>WETH</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Supply Preview */}
-          <div className="bg-[#252836] p-4 rounded-lg space-y-3 border border-[#2a2d36]">
-            <div className="text-lg font-semibold text-white">Supply Overview</div>
-            <div className="flex justify-between text-sm text-gray-300">
-              <span>Interest Earned Annually</span>
-              <span className="font-medium text-green-400">
-                {interestEarned.toFixed(4)} WETH
-              </span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-300">
-              <span>USD Value</span>
-              <span className="font-medium text-white">
-                ${(interestEarned * WETH_PRICE_USD).toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-300">
-              <span>New Total Collateral</span>
-              <span className="font-medium text-blue-400">
-                {newCollateralBalance.toFixed(4)} WETH
-              </span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-300">
-              <span>Total USD Value</span>
-              <span className="font-medium text-white">
-                ${newCollateralValueUSD.toFixed(2)}
-              </span>
-            </div>
-          </div>
+          {amount && Number(amount) > 0 && (
+            <Card className="bg-[#252836] border-[#2a2d36]">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium">Supply Preview</span>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Supply APY</span>
+                    <span className="text-green-400 font-medium">
+                      {supplyApy > 0 ? `${supplyApy.toFixed(2)}%` : 'Loading...'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Projected Annual Earnings</span>
+                    <span className="text-white font-medium">
+                      {projectedEarnings.toFixed(4)} WETH
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">USD Value</span>
+                    <span className="text-white font-medium">
+                      ${(Number(amount) * 3000).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
+          {/* Supply Button */}
           <Button
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white h-12 text-lg font-semibold"
+            className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white h-14 text-lg font-semibold"
             onClick={handleSupply}
-            disabled={!isConnected || isLoading || !amount || Number.parseFloat(amount) <= 0 || Number.parseFloat(amount) > wethBalance}
+            disabled={!isConnected || !amount || Number.parseFloat(amount) <= 0 || Number.parseFloat(amount) > wethBalance || isSubmitting}
           >
-            {isLoading ? (
+            {isSubmitting ? (
               <div className="flex items-center">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                {buttonText}
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                Processing Supply...
               </div>
             ) : (
-              <>
-                <ArrowDownRight className="mr-2 h-5 w-5" />
-                Supply WETH
-              </>
+              <div className="flex items-center">
+                <PiggyBank className="h-5 w-5 mr-3" />
+                Supply {amount || '0'} WETH
+                <ArrowRight className="h-5 w-5 ml-3" />
+              </div>
             )}
           </Button>
+
+          {/* Benefits Section */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-white">Why Supply WETH?</h3>
+            <div className="grid grid-cols-1 gap-3">
+              <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-400" />
+                  <div>
+                    <h4 className="font-semibold">Earn Interest</h4>
+                    <p className="text-sm text-gray-400">Start earning {supplyApy > 0 ? `${supplyApy.toFixed(2)}%` : 'variable'} APY on your WETH immediately.</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Shield className="h-6 w-6 text-blue-400" />
+                  <div>
+                    <h4 className="font-semibold">Use as Collateral</h4>
+                    <p className="text-sm text-gray-400">Supplied WETH can be used as collateral to borrow other assets.</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Zap className="h-6 w-6 text-purple-400" />
+                  <div>
+                    <h4 className="font-semibold">Flexible Supply</h4>
+                    <p className="text-sm text-gray-400">Supply any amount and withdraw anytime (subject to health factor).</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      {/* Benefits Section */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-white">Supply Benefits</h3>
-        <div className="grid grid-cols-1 gap-3">
-          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-            <CardContent className="p-4 flex items-center gap-3">
-              <TrendingUp className="h-6 w-6 text-green-400" />
-              <div>
-                <h4 className="font-semibold">Earn Interest</h4>
-                <p className="text-sm text-gray-400">Earn {supplyApy.toFixed(2)}% APY on your supplied WETH.</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-            <CardContent className="p-4 flex items-center gap-3">
-              <Shield className="h-6 w-6 text-blue-400" />
-              <div>
-                <h4 className="font-semibold">Collateral for Borrowing</h4>
-                <p className="text-sm text-gray-400">Use supplied WETH as collateral to borrow other assets.</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-[#1a1d26] border-[#2a2d36] text-white">
-            <CardContent className="p-4 flex items-center gap-3">
-              <Zap className="h-6 w-6 text-purple-400" />
-              <div>
-                <h4 className="font-semibold">Flexible Supply</h4>
-                <p className="text-sm text-gray-400">Supply any amount and withdraw anytime (subject to health factor).</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+    </motion.div>
   )
 }
