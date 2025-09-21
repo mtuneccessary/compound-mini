@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { injected, metaMask, walletConnect } from "wagmi/connectors"
 import { hardhat, sepolia } from "viem/chains"
 import { getCurrentNetworkConfig, getRpcUrl } from "./network-config"
+import { isTelegramEnv } from "./utils"
 
 // Get current network configuration
 const networkConfig = getCurrentNetworkConfig()
@@ -39,16 +40,33 @@ const getCurrentOrigin = () => {
   return process.env.NEXT_PUBLIC_PUBLIC_BASE_URL || 'http://localhost:3002'
 }
 
+// Runtime env & provider detection (client-only)
+const runtimeHasWindow = typeof window !== 'undefined'
+const isTelegram = runtimeHasWindow && isTelegramEnv()
+const hasInjected = () => {
+  try {
+    const eth = runtimeHasWindow ? (window as any).ethereum : undefined
+    if (!eth) return false
+    if (Array.isArray(eth.providers)) return eth.providers.length > 0
+    return true
+  } catch {
+    return false
+  }
+}
+
+const shouldIncludeWalletConnect = runtimeHasWindow && !!wcProjectId && (isTelegram || !hasInjected())
+
 const connectorsList = [
 	// Prefer generic injected (Rabby, etc.) first, then MetaMask
 	injected({ shimDisconnect: true }),
 	metaMask(),
-	// WalletConnect (only if projectId provided)
-	...(wcProjectId
+	// WalletConnect only when needed (Telegram or no injected wallet in browser)
+	...(shouldIncludeWalletConnect
 		? [
 			walletConnect({
-				projectId: wcProjectId,
-				showQrModal: true,
+				projectId: wcProjectId as string,
+				// Browser with injected: QR off; Telegram or no injected: QR on
+				showQrModal: isTelegram || !hasInjected(),
 				metadata: {
 					name: "Compound Mini",
 					description: "DeFi lending and borrowing",

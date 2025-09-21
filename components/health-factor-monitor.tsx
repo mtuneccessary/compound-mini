@@ -5,12 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Shield, TrendingDown, RefreshCw, Loader2 } from "lucide-react"
 import { useAccount } from "wagmi"
-import { publicClient, COMET_ADDRESS, WETH_ADDRESS, USDC_ADDRESS } from "@/lib/comet-onchain"
+import { publicClient, COMET_ADDRESS, WETH_ADDRESS, USDC_ADDRESS, CHAINLINK_ETH_USD_FEED } from "@/lib/comet-onchain"
 import cometAbi from "@/lib/abis/comet.json"
 import erc20Abi from "@/lib/abis/erc20.json"
 
 // Chainlink ETH/USD Price Feed
-const CHAINLINK_ETH_USD_FEED = "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
 const CHAINLINK_PRICE_FEED_ABI = [
   {
     "inputs": [],
@@ -142,6 +141,15 @@ export function HealthFactorMonitor() {
       fetchHealthData()
     }
   }, [mounted, isConnected, address])
+
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchHealthData()
+      const handler = () => fetchHealthData()
+      window.addEventListener('onchain:updated', handler)
+      return () => window.removeEventListener('onchain:updated', handler)
+    }
+  }, [isConnected, address, mounted])
 
   const getRiskColor = (risk: 'safe' | 'warning' | 'danger') => {
     switch (risk) {

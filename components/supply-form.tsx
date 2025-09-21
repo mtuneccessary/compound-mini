@@ -18,7 +18,9 @@ import { useFeedback } from "@/lib/feedback-provider"
 import { useAccount } from "wagmi"
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { publicClient, WETH_ADDRESS, COMET_ADDRESS } from "@/lib/comet-onchain"
+import { publicClient, WETH_ADDRESS, COMET_ADDRESS, USDC_ADDRESS, approve as viemApprove, supply as viemSupply } from "@/lib/comet-onchain"
+import { checkBalanceAfterTransaction, waitForBlockConfirmation } from "@/lib/simple-debug"
+import { parseUnits } from "viem"
 import erc20Abi from "@/lib/abis/erc20.json"
 import cometAbi from "@/lib/abis/comet.json"
 
@@ -147,55 +149,55 @@ export function SupplyForm() {
       setIsSubmitting(true)
       showLoading(`Supplying ${amount} WETH...`)
 
-      const { ethers } = await import("ethers")
-      if (!(window as any).ethereum) throw new Error("No wallet detected")
-      
-      const provider = new ethers.BrowserProvider((window as any).ethereum)
-      const signer = await provider.getSigner()
+      if (!address) throw new Error("No wallet address")
+      console.log("🔍 [DEBUG] Supply transaction - address:", address)
+      console.log("🔍 [DEBUG] Supply transaction - WETH_ADDRESS:", WETH_ADDRESS)
+      console.log("🔍 [DEBUG] Supply transaction - COMET_ADDRESS:", COMET_ADDRESS)
+      const value = parseUnits(amount, 18)
 
-      // WETH contract
-      const wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-      const wethAbi = [
-        "function balanceOf(address owner) view returns (uint256)",
-        "function approve(address spender, uint256 amount) returns (bool)",
-        "function allowance(address owner, address spender) view returns (uint256)"
-      ]
-      
-      // Comet contract
-      const cometAddress = "0xc3d688B66703497DAA19211EEdff47f25384cdc3"
-      const cometAbi = [
-        "function supply(address asset, uint256 amount) external"
-      ]
+      // Check allowance via readContract
+      const currentAllowance = (await publicClient.readContract({
+        address: WETH_ADDRESS as `0x${string}`,
+        abi: erc20Abi as any,
+        functionName: "allowance",
+        args: [address as `0x${string}`, COMET_ADDRESS as `0x${string}`]
+      })) as bigint
 
-      const weth = new ethers.Contract(wethAddress, wethAbi, signer)
-      const comet = new ethers.Contract(cometAddress, cometAbi, signer)
-
-      const rawAmount = ethers.parseUnits(amount, 18)
-
-      // Check allowance and approve if needed
-      const allowance = await weth.allowance(address, cometAddress)
-      if (allowance < rawAmount) {
+      if (currentAllowance < value) {
         showLoading("Approving WETH...")
-        await (await weth.approve(cometAddress, rawAmount)).wait()
+        console.log("🔍 [DEBUG] About to approve with wallet client")
+        const approveHash = await viemApprove(WETH_ADDRESS as `0x${string}`, address as `0x${string}`, COMET_ADDRESS as `0x${string}`, value)
+        await waitForBlockConfirmation(publicClient, approveHash as `0x${string}`)
+        console.log("🔍 [DEBUG] Approval transaction confirmed")
+        showSuccess("Approval successful", "WETH approved for Compound Mini.")
       }
 
       showLoading("Supplying WETH...")
-      await (await comet.supply(wethAddress, rawAmount)).wait()
+      const supplyHash = await viemSupply(WETH_ADDRESS as `0x${string}`, address as `0x${string}`, value)
+      await waitForBlockConfirmation(publicClient, supplyHash as `0x${string}`)
+      console.log("🔍 [DEBUG] Supply transaction confirmed")
 
-      // Refresh balances so UI reflects immediately
+      console.log("🔍 [DEBUG] Transaction confirmed, updating local state...")
       await Promise.all([loadWethBalance(), loadCollateral()])
-
-      // Notify other parts of the app to refetch on-chain state
+      
+      // Add a small delay to ensure blockchain state has propagated
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      console.log("🔍 [DEBUG] Dispatching onchain:updated event...")
       try {
         const evt = new Event('onchain:updated')
         window.dispatchEvent(evt)
-      } catch {}
+      } catch (error) {
+        console.error("🔍 [DEBUG] Error dispatching event:", error)
+      }
 
       hideLoading()
       setSupplySuccess(true)
     } catch (error: any) {
       hideLoading()
-      const msg = error?.shortMessage || error?.reason || error?.message || "Transaction failed"
+      const details = error?.cause?.shortMessage || error?.shortMessage || error?.cause?.message || error?.message
+      const fallback = "Transaction failed. If you rejected the request, try again."
+      const msg = details || fallback
       showError("Supply Failed", msg)
     } finally {
       setIsSubmitting(false)
@@ -218,23 +220,10 @@ export function SupplyForm() {
               You have supplied <span className="font-bold text-green-400">{amount} WETH</span>
             </p>
             <p className="text-gray-400 mb-6">
-              Your WETH is now earning interest at {supplyApy.toFixed(2)}% APY
+              You're now earning interest on your supplied assets.
             </p>
-            <div className="bg-[#1a1d26] border border-[#2a2d36] rounded-lg p-4 mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">Currently Supplied (Collateral)</span>
-                <span className="text-green-400 font-semibold">{collateralBalance.toFixed(4)} WETH</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Projected Annual Earnings</span>
-                <span className="text-white font-semibold">{projectedEarnings.toFixed(4)} WETH</span>
-              </div>
-            </div>
-            <Button 
-              onClick={() => window.location.href = "/dashboard"}
-              className="w-full bg-green-600 hover:bg-green-700 text-white h-12"
-            >
-              Go to Dashboard
+            <Button className="w-full h-12" onClick={() => setSupplySuccess(false)}>
+              Done
             </Button>
           </CardContent>
         </Card>

@@ -33,3 +33,19 @@ export function formatDate(timestamp: number): string {
     minute: "2-digit",
   })
 }
+
+export function isTelegramEnv(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const w: any = window as any
+    const ua = (navigator?.userAgent || '').toLowerCase()
+    const hasTG = !!w?.Telegram?.WebApp
+    const uaTelegram = ua.includes('telegram')
+    const hasInitData = !!w?.Telegram?.WebApp?.initData || !!w?.Telegram?.WebApp?.initDataUnsafe?.query_id
+    const platform = w?.Telegram?.WebApp?.platform
+    const platformValid = typeof platform === 'string' && platform !== 'unknown'
+    return !!(hasTG && (uaTelegram || hasInitData || platformValid))
+  } catch {
+    return false
+  }
+}

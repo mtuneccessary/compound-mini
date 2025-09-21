@@ -59,18 +59,28 @@ export const NETWORK_CONFIGS: Record<NetworkType, NetworkConfig> = {
 // Get current network from environment variable
 export function getCurrentNetwork(): NetworkType {
   const network = process.env.NEXT_PUBLIC_NETWORK as NetworkType
-  return network && network in NETWORK_CONFIGS ? network : 'local'
+  console.log('🔍 [DEBUG] Environment NEXT_PUBLIC_NETWORK:', process.env.NEXT_PUBLIC_NETWORK)
+  console.log('🔍 [DEBUG] Parsed network:', network)
+  const result = network && network in NETWORK_CONFIGS ? network : 'local'
+  console.log('🔍 [DEBUG] Selected network:', result)
+  return result
 }
 
 // Get current network configuration
 export function getCurrentNetworkConfig(): NetworkConfig {
   const net = getCurrentNetwork()
+  console.log('🔍 [DEBUG] Getting config for network:', net)
   const base = NETWORK_CONFIGS[net]
+  console.log('🔍 [DEBUG] Base config chainId:', base.chainId)
   // For custom, refresh rpcUrl from env on access
   if (net === 'custom') {
     const envRpc = (process.env.NEXT_PUBLIC_ETH_RPC_URL || process.env.ETH_RPC_URL) as string | undefined
-    return { ...base, rpcUrl: envRpc || base.rpcUrl }
+    console.log('🔍 [DEBUG] Custom network RPC URL:', envRpc)
+    const result = { ...base, rpcUrl: envRpc || base.rpcUrl }
+    console.log('🔍 [DEBUG] Final custom config:', result)
+    return result
   }
+  console.log('🔍 [DEBUG] Final config:', base)
   return base
 }
 
